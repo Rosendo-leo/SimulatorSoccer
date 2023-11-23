@@ -105,6 +105,45 @@ public class Simulator extends Canvas implements Runnable, KeyListener, MouseLis
 		Graphics g = image.getGraphics();
 		g.setColor(new Color(0, 0, 0));
 		g.fillRect(0, 0, WIDTH, HEIGHT);
+		
+		//CAMPO
+		g.setColor(new Color(0, 255, 0)); // 1544 864
+		g.fillRect(225-60, 37-60, 1095+120, 790+120);
+		g.fillRect(225, 37, 1095, 790);
+		
+		//LINHAS
+		g.setColor(new Color(255, 255, 255));
+		g.fillRect(225, 37-5, 1095, 5);
+		g.fillRect(225, 37+790, 1095, 5);
+		g.fillRect(225-5, 37-5, 5, 790+10);
+		g.fillRect(225+1095, 37-5, 5, 790+10);
+
+		g.fillRect(225+125, 37+270, 5, 250);
+		g.fillRect(225+1095-125, 37+270, 5, 250);
+		
+		g.fillRect(225, 232, 50, 5);
+		g.fillRect(225, 232+400, 50, 5);
+		g.fillRect(225+1095-50, 232, 50, 5);
+		g.fillRect(225+1095-50, 232+400, 50, 5);
+		
+		g.drawArc(10, 10, 75, 75, 0, 90);
+		
+		g.fillArc(330-75, 37+270-75, 90, 90, 0, 90);
+		
+		//GOLS	
+		g.setColor(new Color(255, 255, 0));
+		g.fillRect(175, 282, 50, 300);
+		g.setColor(new Color(0, 0, 255));
+		g.fillRect(225+1095, 282, 50, 300);
+		
+		//MARCAS
+		g.setColor(new Color(0, 0, 0));
+		g.drawOval(622, 282, 300, 300);
+		g.fillOval(764+4, 424+4, 8, 8);
+		g.fillOval(225+225, 37+225, 8, 8);
+		g.fillOval(225+225, 37+790-225, 8, 8);
+		g.fillOval(225+1095-225, 37+225, 8, 8);
+		g.fillOval(225+1095-225, 37+790-225, 8, 8);
 
 		for(int i = 0; i < objects.size(); i++) {
 			Object e = objects.get(i);
