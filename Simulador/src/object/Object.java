@@ -4,6 +4,8 @@ import java.awt.Graphics;
 import java.awt.Rectangle;
 import java.awt.image.BufferedImage;
 
+import javafx.scene.shape.Circle;
+
 
 public class Object {
 	
@@ -54,8 +56,8 @@ public static int maskx,masky,mwidth,mheight;
 	}
 	
 	public static boolean isColliding(Object e1, Object e2) {
-		Rectangle e1Mask = new Rectangle(e1.getX() + Object.maskx, e1.getY() + Object.masky, mwidth, mheight);
-		Rectangle e2Mask = new Rectangle(e2.getX() + Object.maskx, e2.getY() + Object.masky, mwidth, mheight);
+		Circle e1Mask = new Circle(e1.getX() + Object.maskx, e1.getY() + Object.masky, mwidth);
+		Circle e2Mask = new Circle(e2.getX() + Object.maskx, e2.getY() + Object.masky, mwidth);
 		
 		return e1Mask.intersects(e2Mask);
 	}

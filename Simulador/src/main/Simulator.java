@@ -5,9 +5,6 @@ import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.Graphics;
-import java.awt.Toolkit;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
 import java.awt.event.MouseEvent;
@@ -16,26 +13,25 @@ import java.awt.image.BufferStrategy;
 import java.awt.image.BufferedImage;
 import java.awt.image.DataBufferInt;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.Random;
 
 import javax.swing.JButton;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
-import javax.swing.JOptionPane;
-import javax.swing.JPasswordField;
 import javax.swing.JTextField;
 
 public class Simulator extends Canvas implements Runnable, KeyListener, MouseListener{
 		
 	private static final long serialVersionUID = 1L;
 	public static JFrame frame;
-	public static JFrame control;
+	public static JFrame con;
 	private Thread thread;
 	private boolean isRunning = true;
-	public static final int WIDTH = 1544;
-	public static final int HEIGHT = 864;
+	public static final int WIDTH = 1215;
+	public static final int HEIGHT = 910;
+	public static final int WIDTH_ = 410;
+	public static final int HEIGHT_ = 610;
     public static int FPS;
     public static boolean fps;
     private BufferedImage image;
@@ -46,8 +42,16 @@ public class Simulator extends Canvas implements Runnable, KeyListener, MouseLis
     
 	public static String mode = "Choose";
 	
+	private JButton start, stop;
+	
 	public Simulator() {
     	rand = new Random();
+    	
+    	addKeyListener(this);
+    	addMouseListener(this);
+		setPreferredSize(new Dimension(WIDTH_,HEIGHT_));
+	    initCon();
+    	
     	addKeyListener(this);
     	addMouseListener(this);
 		setPreferredSize(new Dimension(WIDTH,HEIGHT));
@@ -66,6 +70,19 @@ public class Simulator extends Canvas implements Runnable, KeyListener, MouseLis
 		frame.setLocationRelativeTo(null);
 		frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		frame.setVisible(true);
+	}
+	
+	public void initCon() {
+		con = new JFrame ("Configuração");
+		con.add(this);
+		con.setResizable(false);
+		con.pack();
+		con.setLocationRelativeTo(null);
+		con.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+		con.setVisible(true);
+		con.setLayout(new FlowLayout());
+		start = new JButton("Começar");
+		con.add(start);
 	}
     
     public synchronized void start(){
@@ -107,43 +124,49 @@ public class Simulator extends Canvas implements Runnable, KeyListener, MouseLis
 		g.fillRect(0, 0, WIDTH, HEIGHT);
 		
 		//CAMPO
-		g.setColor(new Color(0, 255, 0)); // 1544 864
-		g.fillRect(225-60, 37-60, 1095+120, 790+120);
-		g.fillRect(225, 37, 1095, 790);
+		g.setColor(new Color(0, 255, 0)); //1215 910
+		g.fillRect(0, 0, 1095+120, 790+120);
 		
 		//LINHAS
 		g.setColor(new Color(255, 255, 255));
-		g.fillRect(225, 37-5, 1095, 5);
-		g.fillRect(225, 37+790, 1095, 5);
-		g.fillRect(225-5, 37-5, 5, 790+10);
-		g.fillRect(225+1095, 37-5, 5, 790+10);
+		g.fillRect(225-165, 37-5+23, 1095, 5);
+		g.fillRect(225-165, 37+790+23, 1095, 5);
+		g.fillRect(225-5-165, 37-5+23, 5, 790+10);
+		g.fillRect(225+1095-165, 37-5+23, 5, 790+10);
 
-		g.fillRect(225+125, 37+270, 5, 250);
-		g.fillRect(225+1095-125, 37+270, 5, 250);
+		g.fillRect(225+125-165, 37+270+23, 5, 250);
+		g.fillRect(225+1095-125-165, 37+270+23, 5, 250);
 		
-		g.fillRect(225, 232, 50, 5);
-		g.fillRect(225, 232+400, 50, 5);
-		g.fillRect(225+1095-50, 232, 50, 5);
-		g.fillRect(225+1095-50, 232+400, 50, 5);
+		g.fillRect(225-165, 232+23, 50, 5);
+		g.fillRect(225-165, 232+400+23, 50, 5);
+		g.fillRect(225+1095-50-165, 232+23, 50, 5);
+		g.fillRect(225+1095-50-165, 232+400+23, 50, 5);
 		
-		g.drawArc(10, 10, 75, 75, 0, 90);
+		g.fillArc(330-75-165-60, 37+270-75+23-1, 160, 160, 0, 90);
+		g.fillArc(330-75-165-60, 37+270-75+23+245, 160, 160, 0, -90);
+		g.fillArc(330-75-165-60+1000, 37+270-75+23-1, 160, 160, 90, 90);
+		g.fillArc(330-75-165-60+1000, 37+270-75+23+245, 160, 160, -90, -90);
 		
-		g.fillArc(330-75, 37+270-75, 90, 90, 0, 90);
+		g.setColor(new Color(0, 255, 0));
+		g.fillArc(330-75-165-60-5, 37+270-75+23-1+5, 160, 160, 0, 90);
+		g.fillArc(330-75-165-60-5, 37+270-75+23+245-5, 160, 160, 0, -90);
+		g.fillArc(330-75-165-60+1000+5, 37+270-75+23-1+5, 160, 160, 90, 90);
+		g.fillArc(330-75-165-60+1000+5, 37+270-75+23+245-5, 160, 160, -90, -90);
 		
 		//GOLS	
 		g.setColor(new Color(255, 255, 0));
-		g.fillRect(175, 282, 50, 300);
+		g.fillRect(175-165, 282+23, 50, 300);
 		g.setColor(new Color(0, 0, 255));
-		g.fillRect(225+1095, 282, 50, 300);
+		g.fillRect(225+1095-165, 282+23, 50, 300);
 		
 		//MARCAS
 		g.setColor(new Color(0, 0, 0));
-		g.drawOval(622, 282, 300, 300);
-		g.fillOval(764+4, 424+4, 8, 8);
-		g.fillOval(225+225, 37+225, 8, 8);
-		g.fillOval(225+225, 37+790-225, 8, 8);
-		g.fillOval(225+1095-225, 37+225, 8, 8);
-		g.fillOval(225+1095-225, 37+790-225, 8, 8);
+		g.drawOval(622-165, 282+23, 300, 300);
+		g.fillOval(764+4-165, 424+4+23, 8, 8);
+		g.fillOval(225+225-165, 37+225+23, 8, 8);
+		g.fillOval(225+225-165, 37+790-225+23, 8, 8);
+		g.fillOval(225+1095-225-165, 37+225+23, 8, 8);
+		g.fillOval(225+1095-225-165, 37+790-225+23, 8, 8);
 
 		for(int i = 0; i < objects.size(); i++) {
 			Object e = objects.get(i);

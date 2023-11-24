@@ -10,14 +10,14 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import javax.swing.JOptionPane;
 
-public class Controle extends JFrame{
+public class Configura extends JFrame{
 	 private JTextField usuario;
 	 private JPasswordField senha;
 	 private JButton login, limpa;
 	 private JLabel user, pass;
 	 
-	 public Controle(){
-	  super("Controle");
+	 public Configura(){
+	  super("Configuração");
 	  setLayout(new FlowLayout());
 	  
 	  user = new JLabel("Mestre: ");
