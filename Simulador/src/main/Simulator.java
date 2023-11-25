@@ -61,13 +61,11 @@ public class Simulator extends Canvas implements Runnable, KeyListener, MouseLis
 	    image = new BufferedImage(WIDTH, HEIGHT, BufferedImage.TYPE_INT_RGB);
 		pixels = ((DataBufferInt)image.getRaster().getDataBuffer()).getData();
 	    objects = new ArrayList<Object>();
-	    ball = new Ball(X(0),Y(0),21,Color.red);
-	    objects.add(ball);
 	    
 	    ball = new Ball(X(0),Y(0),42,Color.red);
 	    objects.add(ball);
 	    
-	    robot = new Robot(X(-20),Y(0), 110, Color.darkGray, "r", 4);
+	    robot = new Robot(X(0),Y(20), 110, Color.darkGray, "r", 4);
 	    objects.add(robot);
     }
 

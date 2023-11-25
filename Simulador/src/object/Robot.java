@@ -4,13 +4,18 @@ import java.awt.Color;
 import java.awt.Graphics;
 import java.awt.image.BufferedImage;
 
+import main.Simulator;
+
 public class Robot extends Object{
 	
 	private String tag;
 	private double maxSpeed, speed;
 	private int startAngle;
 	private Color time;
-	private int Angle;
+	public static int Angle;
+	private int kAngle;
+	
+	public int speedX, speedY;
 	
 	public int i = 1;
 	public int e = 1;
@@ -23,34 +28,47 @@ public class Robot extends Object{
 		if(tag == "i") { //Adversário
 			startAngle = -30;
 			time = color.red;
+			kAngle = 1;
+			speed = maxSpeed;
 		}
-		if(tag == "r") {
+		if(tag == "r") { //Companheiro
 			startAngle = 150;
 			time = color.blue;
+			kAngle = -1;
+			speed = maxSpeed;
 		}
 	}
 	
 	public void tick() {
 		//Angle++;
-		velocity(255,0);
+		velocity(1,1);
+		Angle = kAngle*(int)(angleBall());
 		if(tag == "i") { //Adversário
 		}
+		if(tag == "r") { //Companheiro		
+		}
+	}
+	
+	public double angleBall() {
+		return Math.atan2(this.getY()-Simulator.ball.getY(),this.getX()-Simulator.ball.getX())*180/Math.PI;
 	}
 	
 	public void velocity(int velX, int velY) {
-		walkY((int)(velY*Math.cos(Angle)*0.003921568627451)+(int)(velY*Math.sin(Angle)*0.003921568627451));
-		walkX((int)(velX*Math.sin(Angle)*0.003921568627451)+(int)(velX*Math.cos(Angle)*0.003921568627451));
+		walkX(-kAngle*(Math.cos(Angle)*velX)+(Math.sin(Angle)*velX));
+		walkY(kAngle*(Math.cos(Angle)*velY)+(Math.sin(Angle)*velY));
 	}
 	
-	public void walkX(int value) {
+	public void walkX(double value) {
 		if(this.getX()+speed < 1215-(diam/2) && this.getX()-speed > 0+(diam/2)) {
-			this.setX((int)(getX()+(speed*value)));
+			speedX = (int)(speed*value);
+			this.setX(getX()+speedX);
 		}
 	}
 	
-	public void walkY(int value) {
+	public void walkY(double value) {
 		if(this.getY()+speed < 910-(diam/2) && this.getY()-speed > 0+(diam/2)) {
-			this.setY((int)(getY()+(speed*value)));
+			speedY = (int)(speed*value);
+			this.setY(getY()+speedY);
 		}
 	}
 	

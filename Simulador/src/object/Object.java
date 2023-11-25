@@ -3,9 +3,11 @@ package object;
 import java.awt.Color;
 import java.awt.Graphics;
 
+import javafx.scene.shape.Circle;
+
 public class Object {
 	
-public static int maskx,masky,mwidth,mheight;
+public static int maskx,masky,mdiam;
 	
 	protected double x;
 	protected double y;
@@ -19,10 +21,9 @@ public static int maskx,masky,mwidth,mheight;
 		this.diam = diam;
 		this.color = color;
 		
-		Object.maskx = 8;
-		Object.masky = 8;
-		Object.mwidth = 10;
-		Object.mheight = 10;
+		Object.maskx = diam/2;
+		Object.masky = diam/2;
+		Object.mdiam = diam;
 	}
 	
 	public int getX() {
@@ -45,12 +46,21 @@ public static int maskx,masky,mwidth,mheight;
 		return Math.sqrt((x1 - x2) * (x1 - x2) + (y1 - y2) * (y1 - y2));
 	}
 	
-	//public static boolean isColliding(Object e1, Object e2) {
-		//Circle e1Mask = new Circle(e1.getX() + Object.maskx, e1.getY() + Object.masky, mwidth);
-		//Circle e2Mask = new Circle(e2.getX() + Object.maskx, e2.getY() + Object.masky, mwidth);
-		
-		//return e1Mask.intersects(e2Mask);
-	//}
+	public static boolean isColliding(Object e1, Object e2) {		
+		if((e1.getX()+e1.getDiam()/2 != e2.getX()+e2.getDiam()/2) && (e1.getX()-e1.getDiam()/2 != e2.getX()-e2.getDiam()/2) && (e1.getY()+e1.getDiam()/2 != e2.getY()+e2.getDiam()/2) && (e1.getY()-e1.getDiam()/2 != e2.getY()-e2.getDiam()/2)) {
+			return false;
+		}else {
+			return true;
+		}
+	}
+	
+	public static boolean isFree(Object e1, Object e2) {		
+		if((e1.getX()+e1.getDiam()/2 != e2.getX()+e2.getDiam()/2) && (e1.getX()-e1.getDiam()/2 != e2.getX()-e2.getDiam()/2) && (e1.getY()+e1.getDiam()/2 != e2.getY()+e2.getDiam()/2) && (e1.getY()-e1.getDiam()/2 != e2.getY()-e2.getDiam()/2)) {
+			return false;
+		}else {
+			return true;
+		}
+	}
 	
 	public void render(Graphics g) {
 		g.setColor(color);

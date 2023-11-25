@@ -27,7 +27,7 @@ public class Configura extends JFrame{
 	  start.addActionListener(new ActionListener() {
 		   public void actionPerformed(ActionEvent evento){
 		    if(evento.getSource() == start)
-		      JOptionPane.showMessageDialog(null, "A simulação será iniciada!");
+		      JOptionPane.showMessageDialog(null, Simulator.robot.Angle);
 		   	}
 	  		}
 		 );
