@@ -16,7 +16,7 @@ public class Ball extends Object{
 	}
 	
 	public void tick(){
-		//isRobot();
+		isRobot();
 		//walkX(0);
 		//walkY(0);
 	}
@@ -24,6 +24,7 @@ public class Ball extends Object{
 		for(int i = 0; i < Simulator.objects.size(); i++)  {
 			Object atual = Simulator.objects.get(i);
 			if(atual instanceof Robot) {
+				System.out.println(this.isColliding(this, atual));
 				if(Object.isColliding(this, atual)) {
 					colin = true;
 					speedX = ((Robot) atual).speedX;

@@ -15,33 +15,60 @@ import javax.swing.JTextField;
 import main.Simulator;
 
 public class Configura extends JFrame{
-	private JButton start, stop;
-	 private JLabel tempo, gols;
+	private JButton start, stop, add, reset;
+	private JLabel tempo, gols;
+	private CreateRobot create;
 	 
-	 public Configura(){
-	  super("Configuração");
-  	  setPreferredSize(new Dimension(WIDTH,HEIGHT));
-	  setLayout(new FlowLayout());
+	public Configura(){
+		super("Configurações");
+  	  	setPreferredSize(new Dimension(WIDTH,HEIGHT));
+  	  	setLayout(new FlowLayout());
 	  
-	  start = new JButton("Começar");
-	  start.addActionListener(new ActionListener() {
-		   public void actionPerformed(ActionEvent evento){
-		    if(evento.getSource() == start)
-		      JOptionPane.showMessageDialog(null, Simulator.robot.Angle);
-		   	}
+  	  	start = new JButton("Começar");
+  	  	start.addActionListener(new ActionListener() {
+  	  		public void actionPerformed(ActionEvent evento){
+  	  			if(evento.getSource() == start)
+  	  				JOptionPane.showMessageDialog(null, Simulator.robot.Angle);
+  	  			}
 	  		}
-		 );
-	  add(start);
+		);
+  	  	add(start);
 	  
-	  stop = new JButton("Parar");
-	  stop.addActionListener(new ActionListener() {
-		   public void actionPerformed(ActionEvent evento){
-		    if(evento.getSource() == stop)
-		      JOptionPane.showMessageDialog(null, "A simulação será interrompida!");
-		   	}
+  	  	stop = new JButton("Parar");
+  	  	stop.addActionListener(new ActionListener() {
+  	  		public void actionPerformed(ActionEvent evento){
+  	  			if(evento.getSource() == stop)
+  	  				JOptionPane.showMessageDialog(null, "A simulação será interrompida!");
+  	  			}
 	  		}
-		 );
-	  add(stop);
+		);
+  	  	add(stop);
+	  
+  	  	add = new JButton("Adicionar Objeto");
+  	  	add.addActionListener(new ActionListener() {
+  	  		public void actionPerformed(ActionEvent evento){
+  	  			if(evento.getSource() == add) {
+  	  				create = new CreateRobot();
+  	  				create.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+  	  				create.setSize(150,350);
+  	  				create.setResizable(false);
+  	  				create.setVisible(true);
+  	  			}
+  	  		}
+	  	}
+		);
+  	  	add(add);
+  	  	
+  	  	reset = new JButton("Reposicionar os Objetos");
+	  	reset.addActionListener(new ActionListener() {
+	  		public void actionPerformed(ActionEvent evento){
+	  			if(evento.getSource() == reset) {
+	  				Simulator.resetAll();
+	  			}
+	  		}
+	  	}
+		);
+	  	add(reset);
 	  
 	  //login = new JButton("Entrar");
 	  //login.addActionListener(new ActionListener() {

@@ -8,7 +8,7 @@ import main.Simulator;
 
 public class Robot extends Object{
 	
-	private String tag;
+	private String tag, cargo;
 	private double maxSpeed, speed;
 	private int startAngle;
 	private Color time;
@@ -20,9 +20,10 @@ public class Robot extends Object{
 	public int i = 1;
 	public int e = 1;
 
-	public Robot(int x, int y, int diam, Color color, String tag, double maxSpeed) {
+	public Robot(int x, int y, int diam, Color color, String tag, double maxSpeed, String cargo) {
 		super(x, y, diam, color);
 		this.tag = tag;
+		this.cargo = cargo;
 		this.maxSpeed = maxSpeed;
 		
 		if(tag == "i") { //Adversário
@@ -40,9 +41,8 @@ public class Robot extends Object{
 	}
 	
 	public void tick() {
-		//Angle++;
-		velocity(1,1);
-		Angle = kAngle*(int)(angleBall());
+		velocityToBall(1,1);
+		//Angle = kAngle*(int)(angleBall());
 		if(tag == "i") { //Adversário
 		}
 		if(tag == "r") { //Companheiro		
@@ -51,6 +51,11 @@ public class Robot extends Object{
 	
 	public double angleBall() {
 		return Math.atan2(this.getY()-Simulator.ball.getY(),this.getX()-Simulator.ball.getX())*180/Math.PI;
+	}
+	
+	public void velocityToBall(int velX, int velY) {
+		walkX(-kAngle*(Math.cos((int)(angleBall()))*velX)+(Math.sin((int)(angleBall()))*velX));
+		walkY(kAngle*(Math.cos((int)(angleBall()))*velY)+(Math.sin((int)(angleBall()))*velY));
 	}
 	
 	public void velocity(int velX, int velY) {

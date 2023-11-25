@@ -64,9 +64,6 @@ public class Simulator extends Canvas implements Runnable, KeyListener, MouseLis
 	    
 	    ball = new Ball(X(0),Y(0),42,Color.red);
 	    objects.add(ball);
-	    
-	    robot = new Robot(X(0),Y(20), 110, Color.darkGray, "r", 4);
-	    objects.add(robot);
     }
 
 	public void initFrame() {
@@ -113,11 +110,18 @@ public class Simulator extends Canvas implements Runnable, KeyListener, MouseLis
 		}
 	}
 	
-	public int X(int cm) {
+	public static void resetAll() {
+		for(int i = 0; i < objects.size(); i++) {
+			Object e = objects.get(i);
+			e.resetPosition();
+		}
+	} 
+	
+	public static int X(int cm) {
 		return 607+(cm*5); 
 	}
 	
-	public int Y(int cm) {
+	public static int Y(int cm) {
 		return 455+(cm*5); 
 	}
 	

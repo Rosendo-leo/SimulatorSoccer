@@ -12,12 +12,15 @@ public static int maskx,masky,mdiam;
 	protected double x;
 	protected double y;
 	protected int diam;
+	protected int startX, startY;
 	
 	protected Color color;
 	
 	public Object(int x, int y, int diam, Color color) {
 		this.x = x;
 		this.y = y;
+		this.startX = x;
+		this.startY = y;
 		this.diam = diam;
 		this.color = color;
 		
@@ -47,7 +50,7 @@ public static int maskx,masky,mdiam;
 	}
 	
 	public static boolean isColliding(Object e1, Object e2) {		
-		if((e1.getX()+e1.getDiam()/2 != e2.getX()+e2.getDiam()/2) && (e1.getX()-e1.getDiam()/2 != e2.getX()-e2.getDiam()/2) && (e1.getY()+e1.getDiam()/2 != e2.getY()+e2.getDiam()/2) && (e1.getY()-e1.getDiam()/2 != e2.getY()-e2.getDiam()/2)) {
+		if(((Math.abs(e1.getX()+e1.getDiam()/2)-(e2.getX()+e2.getDiam()/2)) <= 5) && (Math.abs((e1.getX()-e1.getDiam()/2)-(e2.getX()-e2.getDiam()/2)) <= 5) && (Math.abs((e1.getY()+e1.getDiam()/2)-(e2.getY()+e2.getDiam()/2)) <= 5) && (Math.abs((e1.getY()-e1.getDiam()/2)-(e2.getY()-e2.getDiam()/2)) <= 5)) {
 			return false;
 		}else {
 			return true;
@@ -73,6 +76,11 @@ public static int maskx,masky,mdiam;
 	
 	public void setY(int newY) {
 		this.y = newY;
+	}
+	
+	public void resetPosition() {
+		setX(startX);
+		setY(startY);
 	}
 
 }
