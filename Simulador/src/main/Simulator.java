@@ -3,7 +3,6 @@ package main;
 import java.awt.Canvas;
 import java.awt.Color;
 import java.awt.Dimension;
-import java.awt.FlowLayout;
 import java.awt.Graphics;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
@@ -16,10 +15,12 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 
-import javax.swing.JButton;
 import javax.swing.JFrame;
-import javax.swing.JLabel;
-import javax.swing.JTextField;
+
+import object.Ball;
+import object.Robot;
+import object.Object;
+import screen.Configura;
 
 public class Simulator extends Canvas implements Runnable, KeyListener, MouseListener{
 		
@@ -37,29 +38,37 @@ public class Simulator extends Canvas implements Runnable, KeyListener, MouseLis
     private BufferedImage image;
     public static Random rand;
     
+    public Configura conf;
+    
     public static List<Object> objects;
+    public static Ball ball;
+    public static Robot robot;
     public int[] pixels;
     
 	public static String mode = "Choose";
-	
-	private JButton start, stop;
 	
 	public Simulator() {
     	rand = new Random();
     	
     	addKeyListener(this);
     	addMouseListener(this);
-		setPreferredSize(new Dimension(WIDTH_,HEIGHT_));
-	    initCon();
-    	
-    	addKeyListener(this);
-    	addMouseListener(this);
 		setPreferredSize(new Dimension(WIDTH,HEIGHT));
 	    initFrame();
+	    
+	    conf = new Configura();
+	    initConf();
 	    
 	    image = new BufferedImage(WIDTH, HEIGHT, BufferedImage.TYPE_INT_RGB);
 		pixels = ((DataBufferInt)image.getRaster().getDataBuffer()).getData();
 	    objects = new ArrayList<Object>();
+	    ball = new Ball(X(0),Y(0),21,Color.red);
+	    objects.add(ball);
+	    
+	    ball = new Ball(X(0),Y(0),42,Color.red);
+	    objects.add(ball);
+	    
+	    robot = new Robot(X(-20),Y(0), 110, Color.darkGray, "r", 4);
+	    objects.add(robot);
     }
 
 	public void initFrame() {
@@ -72,17 +81,11 @@ public class Simulator extends Canvas implements Runnable, KeyListener, MouseLis
 		frame.setVisible(true);
 	}
 	
-	public void initCon() {
-		con = new JFrame ("Configuração");
-		con.add(this);
-		con.setResizable(false);
-		con.pack();
-		con.setLocationRelativeTo(null);
-		con.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-		con.setVisible(true);
-		con.setLayout(new FlowLayout());
-		start = new JButton("Começar");
-		con.add(start);
+	public void initConf() {
+		conf.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+	    conf.setSize(350,650);
+	    conf.setResizable(false);
+	    conf.setVisible(true);
 	}
     
     public synchronized void start(){
@@ -108,8 +111,16 @@ public class Simulator extends Canvas implements Runnable, KeyListener, MouseLis
 	public void tick(){
 		for(int i = 0; i < objects.size(); i++) {
 			Object e = objects.get(i);
-			//e.tick();
+			e.tick();
 		}
+	}
+	
+	public int X(int cm) {
+		return 607+(cm*5); 
+	}
+	
+	public int Y(int cm) {
+		return 455+(cm*5); 
 	}
 	
 	public void render() {
@@ -170,7 +181,7 @@ public class Simulator extends Canvas implements Runnable, KeyListener, MouseLis
 
 		for(int i = 0; i < objects.size(); i++) {
 			Object e = objects.get(i);
-			//e.tick();
+			e.render(g);
 		}
 
 		g.dispose();

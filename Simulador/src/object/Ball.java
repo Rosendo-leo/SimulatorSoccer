@@ -1,18 +1,21 @@
 package object;
 
-import java.awt.image.BufferedImage;
+import java.awt.Color;
+import java.awt.Graphics;
 
 public class Ball extends Object{
-	
-	private BufferedImage sprite;
 
-	public Ball(int x, int y, int width, int height, BufferedImage sprite) {
-		super(x, y, width, height, sprite);
-		this.sprite = sprite;
+	public Ball(int x, int y, int diam, Color color) {
+		super(x, y, diam, color);
 	}
 	
 	public void tick(){
 		
 	}
-
+	
+	public void render(Graphics g) {
+		super.render(g);
+		g.setColor(color);
+		g.fillOval(getX()-(diam/2), getY()-(diam/2), diam, diam);
+	}
 }

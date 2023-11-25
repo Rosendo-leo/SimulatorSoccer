@@ -1,11 +1,7 @@
 package object;
 
+import java.awt.Color;
 import java.awt.Graphics;
-import java.awt.Rectangle;
-import java.awt.image.BufferedImage;
-
-import javafx.scene.shape.Circle;
-
 
 public class Object {
 	
@@ -13,17 +9,15 @@ public static int maskx,masky,mwidth,mheight;
 	
 	protected double x;
 	protected double y;
-	protected int width;
-	protected int height;
+	protected int diam;
 	
-	private BufferedImage sprite;
+	protected Color color;
 	
-	public Object(int x, int y, int width, int height, BufferedImage sprite) {
+	public Object(int x, int y, int diam, Color color) {
 		this.x = x;
 		this.y = y;
-		this.width = width;
-		this.height = height;
-		this.sprite = sprite;
+		this.diam = diam;
+		this.color = color;
 		
 		Object.maskx = 8;
 		Object.masky = 8;
@@ -39,12 +33,8 @@ public static int maskx,masky,mwidth,mheight;
 		return (int)this.y;
 	}
 	
-	public int getWidth() {
-		return this.width;
-	}
-	
-	public int getHeght() {
-		return this.height;
+	public int getDiam() {
+		return this.diam;
 	}
 
 	public void tick() {
@@ -55,15 +45,16 @@ public static int maskx,masky,mwidth,mheight;
 		return Math.sqrt((x1 - x2) * (x1 - x2) + (y1 - y2) * (y1 - y2));
 	}
 	
-	public static boolean isColliding(Object e1, Object e2) {
-		Circle e1Mask = new Circle(e1.getX() + Object.maskx, e1.getY() + Object.masky, mwidth);
-		Circle e2Mask = new Circle(e2.getX() + Object.maskx, e2.getY() + Object.masky, mwidth);
+	//public static boolean isColliding(Object e1, Object e2) {
+		//Circle e1Mask = new Circle(e1.getX() + Object.maskx, e1.getY() + Object.masky, mwidth);
+		//Circle e2Mask = new Circle(e2.getX() + Object.maskx, e2.getY() + Object.masky, mwidth);
 		
-		return e1Mask.intersects(e2Mask);
-	}
+		//return e1Mask.intersects(e2Mask);
+	//}
 	
 	public void render(Graphics g) {
-		g.drawImage(sprite, this.getX(), this.getY(), null);
+		g.setColor(color);
+		g.fillOval(getX()-(diam/2), getY()-(diam/2), diam, diam);
 	}
 	
 	public void setX(int newX) {
