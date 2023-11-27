@@ -45,10 +45,11 @@ public class Simulator extends Canvas implements Runnable, KeyListener, MouseLis
     public static Robot robot;
     public int[] pixels;
     
-	public static String mode = "Choose";
+	public static String mode = "Stop";
 	
 	public Simulator() {
     	rand = new Random();
+    	objects = new ArrayList<Object>();
     	
     	addKeyListener(this);
     	addMouseListener(this);
@@ -60,7 +61,6 @@ public class Simulator extends Canvas implements Runnable, KeyListener, MouseLis
 	    
 	    image = new BufferedImage(WIDTH, HEIGHT, BufferedImage.TYPE_INT_RGB);
 		pixels = ((DataBufferInt)image.getRaster().getDataBuffer()).getData();
-	    objects = new ArrayList<Object>();
 	    
 	    ball = new Ball(X(0),Y(0),42,Color.red);
 	    objects.add(ball);
@@ -111,9 +111,11 @@ public class Simulator extends Canvas implements Runnable, KeyListener, MouseLis
 	}
 	
 	public static void resetAll() {
-		for(int i = 0; i < objects.size(); i++) {
-			Object e = objects.get(i);
-			e.resetPosition();
+		if(mode == "Start") {
+			for(int i = 0; i < objects.size(); i++) {
+				Object e = objects.get(i);
+				e.resetPosition();
+			}
 		}
 	} 
 	
@@ -180,10 +182,12 @@ public class Simulator extends Canvas implements Runnable, KeyListener, MouseLis
 		g.fillOval(225+225-165, 37+790-225+23, 8, 8);
 		g.fillOval(225+1095-225-165, 37+225+23, 8, 8);
 		g.fillOval(225+1095-225-165, 37+790-225+23, 8, 8);
-
-		for(int i = 0; i < objects.size(); i++) {
-			Object e = objects.get(i);
-			e.render(g);
+		
+		if(mode == "Start") {
+			for(int i = 0; i < objects.size(); i++) {
+				Object e = objects.get(i);
+				e.render(g);
+			}
 		}
 
 		g.dispose();

@@ -6,18 +6,19 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 
 import javax.swing.JButton;
+import javax.swing.JComboBox;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
-import javax.swing.JPasswordField;
-import javax.swing.JTextField;
 
 import main.Simulator;
 
 public class Configura extends JFrame{
-	private JButton start, stop, add, reset;
+	private JButton start, stop, add, reset, serial;
 	private JLabel tempo, gols;
 	private CreateRobot create;
+	private Serial serialScreen;
+	private JComboBox objectList;
 	 
 	public Configura(){
 		super("Configurações");
@@ -28,7 +29,8 @@ public class Configura extends JFrame{
   	  	start.addActionListener(new ActionListener() {
   	  		public void actionPerformed(ActionEvent evento){
   	  			if(evento.getSource() == start)
-  	  				JOptionPane.showMessageDialog(null, Simulator.robot.Angle);
+  	  				JOptionPane.showMessageDialog(null, "Iniciando a simulação!");
+  	  				Simulator.mode = "Start";
   	  			}
 	  		}
 		);
@@ -38,7 +40,8 @@ public class Configura extends JFrame{
   	  	stop.addActionListener(new ActionListener() {
   	  		public void actionPerformed(ActionEvent evento){
   	  			if(evento.getSource() == stop)
-  	  				JOptionPane.showMessageDialog(null, "A simulação será interrompida!");
+  	  				JOptionPane.showMessageDialog(null, "Simulação interrompida!");
+  	  				Simulator.mode = "Stop";
   	  			}
 	  		}
 		);
@@ -58,6 +61,21 @@ public class Configura extends JFrame{
 	  	}
 		);
   	  	add(add);
+  	  	
+  	  	serial = new JButton("Iniciar serial");
+	  	serial.addActionListener(new ActionListener() {
+	  		public void actionPerformed(ActionEvent evento){
+	  			if(evento.getSource() == serial) {
+	  				serialScreen = new Serial();
+	  				serialScreen.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+	  				serialScreen.setSize(420,80);
+	  				serialScreen.setResizable(false);
+	  				serialScreen.setVisible(true);
+	  			}
+	  		}
+	  	}
+		);
+	  	add(serial);
   	  	
   	  	reset = new JButton("Reposicionar os Objetos");
 	  	reset.addActionListener(new ActionListener() {

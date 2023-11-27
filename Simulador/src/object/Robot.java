@@ -41,8 +41,8 @@ public class Robot extends Object{
 	}
 	
 	public void tick() {
-		velocityToBall(1,1);
-		//Angle = kAngle*(int)(angleBall());
+		//velocityToBall(1,1);
+		Angle = kAngle*(int)(angleBall());
 		if(tag == "i") { //Adversário
 		}
 		if(tag == "r") { //Companheiro		

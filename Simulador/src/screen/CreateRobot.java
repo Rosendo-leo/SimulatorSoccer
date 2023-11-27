@@ -89,19 +89,5 @@ public class CreateRobot extends JFrame{
 		}
 		}
 		);
-				
-		//login = new JButton("Entrar");
-		//login.addActionListener(new ActionListener() {
-		//public void actionPerformed(ActionEvent evento){
-	    //if(evento.getSource() == login)
-	     //if(usuario.getText().equals("Pedro") && senha.getText().equals("amiguinhopedro503")) {
-	    	 //JOptionPane.showMessageDialog(null, "Acessando portal do Mestre!");
-	     //}else
-	      //JOptionPane.showMessageDialog(null, "Login ou senha incorreto, Tente novamente!");
-	    
-		//}
-		//}
-		//);
-		//add(login);
 	 } 
 }
