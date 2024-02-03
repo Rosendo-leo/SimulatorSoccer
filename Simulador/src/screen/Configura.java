@@ -34,6 +34,7 @@ public class Configura extends JFrame{
   	  			}
 	  		}
 		);
+  	  	start.setAlignmentX(CENTER_ALIGNMENT);
   	  	add(start);
 	  
   	  	stop = new JButton("Parar");
@@ -45,6 +46,7 @@ public class Configura extends JFrame{
   	  			}
 	  		}
 		);
+  	  	stop.setAlignmentX(CENTER_ALIGNMENT);
   	  	add(stop);
 	  
   	  	add = new JButton("Adicionar Objeto");
@@ -60,6 +62,7 @@ public class Configura extends JFrame{
   	  		}
 	  	}
 		);
+  	  	add.setAlignmentX(CENTER_ALIGNMENT);
   	  	add(add);
   	  	
   	  	serial = new JButton("Iniciar serial");
@@ -75,6 +78,7 @@ public class Configura extends JFrame{
 	  		}
 	  	}
 		);
+	  	serial.setAlignmentX(CENTER_ALIGNMENT);
 	  	add(serial);
   	  	
   	  	reset = new JButton("Reposicionar os Objetos");
@@ -86,6 +90,7 @@ public class Configura extends JFrame{
 	  		}
 	  	}
 		);
+	  	reset.setAlignmentX(CENTER_ALIGNMENT);
 	  	add(reset);
 	  
 	  //login = new JButton("Entrar");

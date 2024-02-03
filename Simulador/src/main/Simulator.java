@@ -16,6 +16,9 @@ import java.util.List;
 import java.util.Random;
 
 import javax.swing.JFrame;
+import javax.swing.JLabel;
+
+import com.sun.media.sound.MidiUtils.TempoCache;
 
 import object.Ball;
 import object.Robot;
@@ -47,6 +50,8 @@ public class Simulator extends Canvas implements Runnable, KeyListener, MouseLis
     
 	public static String mode = "Stop";
 	
+	private JLabel tempo;
+	
 	public Simulator() {
     	rand = new Random();
     	objects = new ArrayList<Object>();
@@ -69,11 +74,12 @@ public class Simulator extends Canvas implements Runnable, KeyListener, MouseLis
 	public void initFrame() {
 		frame = new JFrame ("Simulator - Soccer");
 		frame.add(this);
-		frame.setResizable(false);
+		frame.setResizable(true);
 		frame.pack();
 		frame.setLocationRelativeTo(null);
 		frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		frame.setVisible(true);
+		tempo = new JLabel("Sim");
 	}
 	
 	public void initConf() {
