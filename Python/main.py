@@ -38,8 +38,11 @@ class Ball:
         self.raid *= k
 
     def move(self):
-        self.x += self.vel_x
-        self.y += self.vel_y
+        if abs(self.x + self.vel_x) <= 220 * SCALE/2: self.x += self.vel_x
+        else: self.vel_x *= -1
+
+        if abs(self.y + self.vel_y) <= 160 * SCALE/2: self.y += self.vel_y
+        else: self.vel_y *= -1
     
     def collision(self, other):
         dist = math.sqrt((self.x - other.x) ** 2 + (self.y - other.y) ** 2)
@@ -50,7 +53,9 @@ class Ball:
         if abs(self.vel_y) >= 0.01: self.vel_y -= FAT * math.copysign(1, self.vel_y) * self.mass
 
     def draw(self, screen):
-        pygame.draw.circle(screen, self.color, (int(self.x), int(self.y)), self.raid)
+        x = self.x + CENTER_W
+        y = self.y + CENTER_H
+        pygame.draw.circle(screen, self.color, (int(x), int(y)), self.raid)
 
 ACC_P = 0.7
 ACC_A = 0.8
@@ -75,7 +80,7 @@ class Robot:
         self.vel_max *= k
         self.raid *= k
 
-    def move(self, vel_x, vel_y, vel_ang):
+    def move(self, vel_y, vel_x, vel_ang):
         if(self.vel_max >= abs(self.vel_x + vel_x * ACC_P)): self.vel_x += vel_x * ACC_P
         if(self.vel_max >= abs(self.vel_y + vel_y * ACC_P)): self.vel_y += vel_y * ACC_P
         if(self.vel_max >= abs(self.vel_ang + vel_ang * ACC_P)): self.vel_ang += vel_ang * ACC_A
@@ -94,10 +99,12 @@ class Robot:
         return dist < (self.raid + other.raid)
     
     def draw(self, screen):
-        pygame.draw.circle(screen, self.color, (int(self.x), int(self.y)), self.raid)
-        ponta_x = self.x + self.raid * math.cos(math.radians(self.ang_rel))
-        ponta_y = self.y + self.raid * math.sin(math.radians(self.ang_rel))
-        pygame.draw.line(screen, BRANCO, (self.x, self.y), (ponta_x, ponta_y), 2)
+        x = self.x + CENTER_W
+        y = self.y + CENTER_H
+        pygame.draw.circle(screen, self.color, (int(x), int(y)), self.raid)
+        ponta_x = x + self.raid * math.cos(math.radians(self.ang_rel))
+        ponta_y = y + self.raid * math.sin(math.radians(self.ang_rel))
+        pygame.draw.line(screen, BRANCO, (x, y), (ponta_x, ponta_y), 2)
 
 VERDE = (0, 128, 0)
 BRANCO = (255, 255, 255)
@@ -131,8 +138,9 @@ GOAL_DEPTH = 10 * SCALE
 GOAL_ARC_RADIUS = 23 * SCALE
 CENTER_CIRCLE_RADIUS = 30 * SCALE
 NEUTRAL_SPOT_RADIUS = 1 * SCALE // 2
+LINE_WIDTH = 1 * SCALE
 
-def draw_field(screen, scale):
+def draw_field(screen):
     pygame.draw.rect(screen, VERDE, (
             (CENTER_W - TOTAL_FIELD_WIDTH/2),
             (CENTER_H - TOTAL_FIELD_HEIGHT/2),
@@ -145,12 +153,12 @@ def draw_field(screen, scale):
             OUTER_AREA_HEIGHT,
             PLAY_FIELD_WIDTH,
             PLAY_FIELD_HEIGHT
-        ), 1 * SCALE)
+        ), LINE_WIDTH)
     
     pygame.draw.circle(screen, PRETO, (
             OUTER_AREA_WIDTH + PLAY_FIELD_WIDTH // 2,
             OUTER_AREA_HEIGHT + PLAY_FIELD_HEIGHT // 2
-        ), CENTER_CIRCLE_RADIUS, 1 * SCALE)
+        ), CENTER_CIRCLE_RADIUS, LINE_WIDTH)
     
     pygame.draw.rect(screen, AZUL, (
             OUTER_AREA_WIDTH + PLAY_FIELD_WIDTH,
@@ -158,6 +166,45 @@ def draw_field(screen, scale):
             GOAL_DEPTH,
             GOAL_WIDTH
         ))
+    
+    pygame.draw.line(screen, BRANCO, (OUTER_AREA_WIDTH , OUTER_AREA_HEIGHT + (PLAY_FIELD_HEIGHT - GOAL_WIDTH) // 2 - 5 * SCALE), (OUTER_AREA_WIDTH - GOAL_DEPTH + 20 * SCALE, OUTER_AREA_HEIGHT + (PLAY_FIELD_HEIGHT - GOAL_WIDTH) // 2 - 5 * SCALE), width= LINE_WIDTH)
+    pygame.draw.line(screen, BRANCO, (OUTER_AREA_WIDTH , OUTER_AREA_HEIGHT + (PLAY_FIELD_HEIGHT - GOAL_WIDTH) // 2 + GOAL_WIDTH + 5 * SCALE), (OUTER_AREA_WIDTH - GOAL_DEPTH + 20 * SCALE, OUTER_AREA_HEIGHT + (PLAY_FIELD_HEIGHT - GOAL_WIDTH) // 2 + GOAL_WIDTH + 5 * SCALE), width= LINE_WIDTH)
+    pygame.draw.line(screen, BRANCO, (OUTER_AREA_WIDTH + 25 * SCALE, OUTER_AREA_HEIGHT + (PLAY_FIELD_HEIGHT - GOAL_WIDTH) // 2 + 10 * SCALE), (OUTER_AREA_WIDTH + 25 * SCALE, OUTER_AREA_HEIGHT + (PLAY_FIELD_HEIGHT - GOAL_WIDTH) // 2 + 50 * SCALE), width= LINE_WIDTH)
+    pygame.draw.arc(screen, BRANCO, (
+        OUTER_AREA_WIDTH - GOAL_DEPTH + 3.9 * SCALE, 
+        OUTER_AREA_HEIGHT + (PLAY_FIELD_HEIGHT - GOAL_WIDTH) // 2 - 5.2 * SCALE,
+        16 * SCALE * 2,
+        16 * SCALE * 2
+    ), 2 * 3.14, 2.5 * 3.14, width= LINE_WIDTH)
+    pygame.draw.arc(screen, BRANCO, (
+        OUTER_AREA_WIDTH - GOAL_DEPTH + 3.9 * SCALE, 
+        OUTER_AREA_HEIGHT + (PLAY_FIELD_HEIGHT - GOAL_WIDTH) // 2 + GOAL_WIDTH - 26.3 * SCALE,
+        16 * SCALE * 2,
+        16 * SCALE * 2
+    ), 1.5 * 3.14, 2 * 3.14, width= LINE_WIDTH)
+    
+    pygame.draw.rect(screen, AMARELO, (
+            OUTER_AREA_WIDTH - GOAL_DEPTH,
+            OUTER_AREA_HEIGHT + (PLAY_FIELD_HEIGHT - GOAL_WIDTH) // 2,
+            GOAL_DEPTH,
+            GOAL_WIDTH
+        ))
+    
+    pygame.draw.line(screen, BRANCO, (OUTER_AREA_WIDTH + PLAY_FIELD_WIDTH - 11 * SCALE, OUTER_AREA_HEIGHT + (PLAY_FIELD_HEIGHT - GOAL_WIDTH) // 2 - 5 * SCALE), (OUTER_AREA_WIDTH + PLAY_FIELD_WIDTH - 1 * SCALE, OUTER_AREA_HEIGHT + (PLAY_FIELD_HEIGHT - GOAL_WIDTH) // 2 - 5 * SCALE), width= LINE_WIDTH)
+    pygame.draw.line(screen, BRANCO, (OUTER_AREA_WIDTH + PLAY_FIELD_WIDTH - 11 * SCALE, OUTER_AREA_HEIGHT + (PLAY_FIELD_HEIGHT - GOAL_WIDTH) // 2 + GOAL_WIDTH + 5 * SCALE), (OUTER_AREA_WIDTH + PLAY_FIELD_WIDTH - 1 * SCALE, OUTER_AREA_HEIGHT + (PLAY_FIELD_HEIGHT - GOAL_WIDTH) // 2 + GOAL_WIDTH + 5 * SCALE), width= LINE_WIDTH)
+    pygame.draw.line(screen, BRANCO, (OUTER_AREA_WIDTH - 25 * SCALE + PLAY_FIELD_WIDTH, OUTER_AREA_HEIGHT + (PLAY_FIELD_HEIGHT - GOAL_WIDTH) // 2 + 10 * SCALE), (OUTER_AREA_WIDTH - 25 * SCALE + PLAY_FIELD_WIDTH, OUTER_AREA_HEIGHT + (PLAY_FIELD_HEIGHT - GOAL_WIDTH) // 2 + 50 * SCALE), width= LINE_WIDTH)
+    pygame.draw.arc(screen, BRANCO, (
+        OUTER_AREA_WIDTH - GOAL_DEPTH - 0.3 * SCALE + PLAY_FIELD_WIDTH - 15 * SCALE, 
+        OUTER_AREA_HEIGHT + (PLAY_FIELD_HEIGHT - GOAL_WIDTH) // 2 - 5.2 * SCALE,
+        16 * SCALE * 2,
+        16 * SCALE * 2
+    ), 0.5 * 3.14, 1 * 3.14, width= LINE_WIDTH)
+    pygame.draw.arc(screen, BRANCO, (
+        OUTER_AREA_WIDTH - GOAL_DEPTH - 0.3 * SCALE + PLAY_FIELD_WIDTH - 15 * SCALE, 
+        OUTER_AREA_HEIGHT + (PLAY_FIELD_HEIGHT - GOAL_WIDTH) // 2 + GOAL_WIDTH - 26.3 * SCALE,
+        16 * SCALE * 2,
+        16 * SCALE * 2
+    ), 1 * 3.14, 1.5 * 3.14, width= LINE_WIDTH)
     
     pygame.draw.rect(screen, AMARELO, (
             OUTER_AREA_WIDTH - GOAL_DEPTH,
@@ -174,19 +221,19 @@ def draw_field(screen, scale):
         ),  # Centro
         (
             OUTER_AREA_WIDTH + 45 * SCALE,
-            OUTER_AREA_HEIGHT + 45 * SCALE
+            OUTER_AREA_HEIGHT + 40 * SCALE
         ),  # Canto superior esquerdo
         (
             OUTER_AREA_WIDTH + PLAY_FIELD_WIDTH - 45 * SCALE,
-            OUTER_AREA_HEIGHT + 45 * SCALE
+            OUTER_AREA_HEIGHT + 40 * SCALE
         ),  # Canto superior direito
         (
             OUTER_AREA_WIDTH + 45 * SCALE,
-            OUTER_AREA_HEIGHT + PLAY_FIELD_HEIGHT - 45 * SCALE
+            OUTER_AREA_HEIGHT + PLAY_FIELD_HEIGHT - 40 * SCALE
         ),  # Canto inferior esquerdo
         (
             OUTER_AREA_WIDTH + PLAY_FIELD_WIDTH - 45 * SCALE,
-            OUTER_AREA_HEIGHT + PLAY_FIELD_HEIGHT - 45 * SCALE
+            OUTER_AREA_HEIGHT + PLAY_FIELD_HEIGHT - 40 * SCALE
         )  # Canto inferior direito
     ]
 
@@ -198,15 +245,16 @@ proporcao_velocidade = 0.005
 
 pygame.init()
 screen = pygame.display.set_mode((screen_W, screen_H), pygame.RESIZABLE)
-pygame.display.set_caption("Simulador Soccer RoboCup Junior - Aperture")
+pygame.display.set_caption("Campo Simulado - Aperture")
 clock = pygame.time.Clock()
 
 logo = pygame.image.load("Python/logo.png")
 pygame.display.set_icon(logo)
 
-robot_b = Robot(200, 300, 0, 3, DIA_ROBOT/2 * SCALE, 40, AZUL)
-robot_r = Robot(600, 300, 180, 3, DIA_ROBOT/2 * SCALE, 40, VERMELHO)
-ball = Ball(400, 300, 3.5, DIA_BALL/2 * SCALE, 5, LARANJA)
+robot_b = Robot(-30 * SCALE, 0 * SCALE, 0, 3.3, DIA_ROBOT/2 * SCALE, 40, AZUL)
+robot_r = Robot(30 * SCALE, 0 * SCALE, 180, 3.3, DIA_ROBOT/2 * SCALE, 40, VERMELHO)
+ball = Ball(0 * SCALE, 0 * SCALE, 3.5, DIA_BALL/2 * SCALE, 5, LARANJA)
+# 52   27
 
 #thread.start()
 
@@ -225,13 +273,13 @@ while running:
     vel_y = 0
     vel_ang = 0
     if teclas[pygame.K_w]:
-        vel_x = 0.1
-    if teclas[pygame.K_s]:
-        vel_x = -0.1
-    if teclas[pygame.K_a]:
-        vel_y = -0.1
-    if teclas[pygame.K_d]:
         vel_y = 0.1
+    if teclas[pygame.K_s]:
+        vel_y = -0.1
+    if teclas[pygame.K_a]:
+        vel_x = -0.1
+    if teclas[pygame.K_d]:
+        vel_x = 0.1
     if teclas[pygame.K_q]:
         vel_ang = -0.1
     if teclas[pygame.K_e]:
@@ -247,9 +295,9 @@ while running:
     ball.move()
 
     screen.fill(PRETO)
-    draw_field(screen, 0)
+    draw_field(screen)
     robot_b.draw(screen)
-    robot_r.draw(screen)
+    #robot_r.draw(screen)
     ball.draw(screen)
 
     pygame.display.flip()
