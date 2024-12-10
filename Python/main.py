@@ -3,7 +3,7 @@ import tkinter as tk
 import threading
 import math
 
-def abrir_tkinter():
+def open_control():
     root = tk.Tk()
     root.title("Controle Simulador")
 
@@ -18,8 +18,7 @@ def abrir_tkinter():
 
     root.mainloop()
 
-tkinter_thread = threading.Thread(target=abrir_tkinter)
-tkinter_thread.start()
+thread = threading.Thread(target=open_control)
 
 COL_P = 0.8
 
@@ -107,9 +106,93 @@ AZUL = (0, 0, 255)
 VERMELHO = (255, 0, 0)
 LARANJA = (255, 127, 0)
 CINZA = (50, 50, 50)
+AMARELO = (255, 255, 0)
 
-screen_W = 1000 
-screen_H = 600
+SCALE = 6
+
+DIA_ROBOT = 18
+DIA_BALL =  4.3
+
+screen_W = 1920
+screen_H = 1000
+
+CENTER_H = screen_H/2
+CENTER_W = screen_W/2
+
+PLAY_FIELD_WIDTH = 193 * SCALE
+PLAY_FIELD_HEIGHT = 132 * SCALE
+TOTAL_FIELD_WIDTH = 223 * SCALE
+TOTAL_FIELD_HEIGHT = 162 * SCALE 
+OUTER_AREA_WIDTH = 15 * SCALE + (CENTER_W - TOTAL_FIELD_WIDTH/2)
+OUTER_AREA_HEIGHT = 15 * SCALE + (CENTER_H - TOTAL_FIELD_HEIGHT/2)
+WALL_HEIGHT = 22 * SCALE
+GOAL_WIDTH = 60 * SCALE 
+GOAL_DEPTH = 10 * SCALE
+GOAL_ARC_RADIUS = 23 * SCALE
+CENTER_CIRCLE_RADIUS = 30 * SCALE
+NEUTRAL_SPOT_RADIUS = 1 * SCALE // 2
+
+def draw_field(screen, scale):
+    pygame.draw.rect(screen, VERDE, (
+            (CENTER_W - TOTAL_FIELD_WIDTH/2),
+            (CENTER_H - TOTAL_FIELD_HEIGHT/2),
+            TOTAL_FIELD_WIDTH,
+            TOTAL_FIELD_HEIGHT
+        ))
+    
+    pygame.draw.rect(screen, BRANCO, (
+            OUTER_AREA_WIDTH,
+            OUTER_AREA_HEIGHT,
+            PLAY_FIELD_WIDTH,
+            PLAY_FIELD_HEIGHT
+        ), 1 * SCALE)
+    
+    pygame.draw.circle(screen, PRETO, (
+            OUTER_AREA_WIDTH + PLAY_FIELD_WIDTH // 2,
+            OUTER_AREA_HEIGHT + PLAY_FIELD_HEIGHT // 2
+        ), CENTER_CIRCLE_RADIUS, 1 * SCALE)
+    
+    pygame.draw.rect(screen, AZUL, (
+            OUTER_AREA_WIDTH + PLAY_FIELD_WIDTH,
+            OUTER_AREA_HEIGHT + (PLAY_FIELD_HEIGHT - GOAL_WIDTH) // 2,
+            GOAL_DEPTH,
+            GOAL_WIDTH
+        ))
+    
+    pygame.draw.rect(screen, AMARELO, (
+            OUTER_AREA_WIDTH - GOAL_DEPTH,
+            OUTER_AREA_HEIGHT + (PLAY_FIELD_HEIGHT - GOAL_WIDTH) // 2,
+            GOAL_DEPTH,
+            GOAL_WIDTH
+        ))
+
+    # Pontos neutros
+    neutral_spots = [
+        (
+            OUTER_AREA_WIDTH + PLAY_FIELD_WIDTH // 2,
+            OUTER_AREA_HEIGHT + PLAY_FIELD_HEIGHT // 2
+        ),  # Centro
+        (
+            OUTER_AREA_WIDTH + 45 * SCALE,
+            OUTER_AREA_HEIGHT + 45 * SCALE
+        ),  # Canto superior esquerdo
+        (
+            OUTER_AREA_WIDTH + PLAY_FIELD_WIDTH - 45 * SCALE,
+            OUTER_AREA_HEIGHT + 45 * SCALE
+        ),  # Canto superior direito
+        (
+            OUTER_AREA_WIDTH + 45 * SCALE,
+            OUTER_AREA_HEIGHT + PLAY_FIELD_HEIGHT - 45 * SCALE
+        ),  # Canto inferior esquerdo
+        (
+            OUTER_AREA_WIDTH + PLAY_FIELD_WIDTH - 45 * SCALE,
+            OUTER_AREA_HEIGHT + PLAY_FIELD_HEIGHT - 45 * SCALE
+        )  # Canto inferior direito
+    ]
+
+    for spot in neutral_spots:
+        pygame.draw.circle(screen, PRETO, spot, NEUTRAL_SPOT_RADIUS)
+
 proporcao_raio_robo = 0.02
 proporcao_velocidade = 0.005
 
@@ -121,9 +204,11 @@ clock = pygame.time.Clock()
 logo = pygame.image.load("Python/logo.png")
 pygame.display.set_icon(logo)
 
-robot_b = Robot(200, 300, 0, 3, 20, 40, AZUL)
-robot_r = Robot(600, 300, 180, 3, 20, 40, VERMELHO)
-ball = Ball(400, 300, 3.5, 5, 5, LARANJA)
+robot_b = Robot(200, 300, 0, 3, DIA_ROBOT/2 * SCALE, 40, AZUL)
+robot_r = Robot(600, 300, 180, 3, DIA_ROBOT/2 * SCALE, 40, VERMELHO)
+ball = Ball(400, 300, 3.5, DIA_BALL/2 * SCALE, 5, LARANJA)
+
+#thread.start()
 
 running = True
 while running:
@@ -132,16 +217,8 @@ while running:
         if event.type == pygame.QUIT:
             running = False
         elif event.type == pygame.VIDEORESIZE:
-            
             screen_W, screen_H = event.size
             screen = pygame.display.set_mode((screen_W, screen_H), pygame.RESIZABLE)
-
-    campo_largura = int(screen_W* 0.74)
-    campo_altura = int(screen_H * 0.9)
-    campo = pygame.Rect((30, 30), (campo_largura, campo_altura))
-
-    robot_b.resize(screen_W/last_W)
-    robot_r.resize(screen_W/last_W)
 
     teclas = pygame.key.get_pressed()
     vel_x = 0
@@ -161,8 +238,6 @@ while running:
         vel_ang = 0.1
     robot_b.move(vel_x, vel_y, vel_ang)
 
-    robot_r.move(1, 1, 10)
-
     if robot_b.check_collision(robot_r):
         robot_b.velocidade = 0
         robot_r.velocidade = 0
@@ -172,8 +247,7 @@ while running:
     ball.move()
 
     screen.fill(PRETO)
-    pygame.draw.rect(screen, VERDE, campo)
-    pygame.draw.line(screen, BRANCO, (campo.left + campo.width // 2, campo.top), (campo.left + campo.width // 2, campo.bottom), 2)
+    draw_field(screen, 0)
     robot_b.draw(screen)
     robot_r.draw(screen)
     ball.draw(screen)
