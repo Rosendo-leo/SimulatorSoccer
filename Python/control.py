@@ -17,7 +17,7 @@ class Control:
         button = tk.Button(root, text="Parar", command=self.stop)
         button.pack(pady=10)
 
-        self.label = tk.Label(root, text="00:00:00", font=("Helvetica", 48))
+        self.label = tk.Label(root, text="00:00:00", font=("Helvetica", 35))
         self.label.pack(pady=20)
 
         self.update_clock()

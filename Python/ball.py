@@ -6,6 +6,9 @@ class Ball:
     def __init__(self, x, y, vel_max, raid, mass, color):
         self.x = x * data.SCALE
         self.y = y * data.SCALE
+        self.x_i = self.x
+        self.y_i = self.y
+
         self.raid = raid * data.SCALE
         self.vel_max = vel_max
         self.mass = mass
@@ -17,13 +20,24 @@ class Ball:
     def resize(self, k):
         self.raid *= k
 
-    def reset_pos(self):
-        self.x = 0
-        self.y = 0
+    def reset(self):
+        self.x = self.x_i
+        self.y = self.y_i
+
+        self.vel_x = 0
+        self.vel_y = 0
+
+    def goal(self):
+        if(self.x >= 1539 - data.CENTER_W and self.y >= 320 - data.CENTER_H - 2 * data.SCALE and self.x <= 1539 + 60 - data.CENTER_W and self.y <= 320 + 360 - data.CENTER_H - 4 * data.SCALE):
+            return 1
+        else:
+            return 0
 
     def move(self):
         if abs(self.x + self.vel_x) <= 220 * data.SCALE/2: self.x += self.vel_x
         else: self.vel_x *= -data.COL_W
+
+        if (abs(self.x + self.vel_x) <= 195 * data.SCALE/2) and not(abs(self.y + self.vel_y) >= 30 * data.SCALE/2) and not(abs(self.y + self.vel_y) <= 28 * data.SCALE/2): self.vel_x *= -data.COL_W
 
         if abs(self.y + self.vel_y) <= 160 * data.SCALE/2: self.y += self.vel_y
         else: self.vel_y *= -data.COL_W

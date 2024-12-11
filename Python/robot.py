@@ -2,11 +2,15 @@ import math
 import pygame
 import data
 
-class Robot:
+class Robot():
     def __init__(self, x, y, ang, vel_max, raid, mass, color):
         self.x = x * data.SCALE
         self.y = y * data.SCALE
+        self.x_i = self.x
+        self.y_i = self.y
+
         self.ang_rel = ang
+        self.ang_i = self.ang_rel
         self.vel_max = vel_max
         self.raid = raid * data.SCALE
         self.mass = mass
@@ -20,6 +24,15 @@ class Robot:
     def resize(self, k):
         self.vel_max *= k
         self.raid *= k
+
+    def reset(self):
+        self.x = self.x_i
+        self.y = self.y_i
+        self.ang = 0
+        self.ang_rel = self.ang_i
+
+        self.vel_x = 0
+        self.vel_y = 0
 
     def move(self, vel_y, vel_x, vel_ang):
         if(self.vel_max >= abs(self.vel_x + vel_x * data.ACC_P)): self.vel_x += vel_x * data.ACC_P

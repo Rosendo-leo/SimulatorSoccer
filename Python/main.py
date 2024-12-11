@@ -24,7 +24,7 @@ clock = pygame.time.Clock()
 logo = pygame.image.load("Python/logo.png")
 pygame.display.set_icon(logo)
 
-robot_b = Robot(-30, 0, 0, 3.3, data.DIA_ROBOT/2, 40, data.AZUL)
+robot_b = Robot(-30, 0, 0, 3.3, data.DIA_ROBOT/2, 40, data.ROXO)
 robot_r = Robot(30, 0, 180, 3.3, data.DIA_ROBOT/2, 40, data.VERMELHO)
 ball = Ball(0, 0, 3.5, data.DIA_BALL/2, 5, data.LARANJA)
 field = Field()
@@ -67,6 +67,9 @@ while running:
     ball.collision(robot_b)
     ball.collision(robot_r)
     ball.move()
+    if ball.goal():
+        ball.reset()
+        robot_b.reset()
 
     screen.fill(data.PRETO)
     field.draw(screen)

@@ -25,11 +25,17 @@ class Field:
                 data.OUTER_AREA_HEIGHT + data.PLAY_FIELD_HEIGHT // 2
             ), data.CENTER_CIRCLE_RADIUS, data.LINE_WIDTH)
         
-        pygame.draw.rect(screen, data.AZUL, (
+        pygame.draw.rect(screen, data.AZUL_ESCURO, (
                 data.OUTER_AREA_WIDTH + data.PLAY_FIELD_WIDTH,
                 data.OUTER_AREA_HEIGHT + (data.PLAY_FIELD_HEIGHT - data.GOAL_WIDTH) // 2,
                 data.GOAL_DEPTH,
                 data.GOAL_WIDTH
+            ))
+        pygame.draw.rect(screen, data.AZUL, (
+                data.OUTER_AREA_WIDTH + data.PLAY_FIELD_WIDTH,
+                data.OUTER_AREA_HEIGHT + (data.PLAY_FIELD_HEIGHT - data.GOAL_WIDTH) // 2 + 2 * data.SCALE,
+                data.GOAL_DEPTH - 2 * data.SCALE,
+                data.GOAL_WIDTH - 4 * data.SCALE
             ))
         
         pygame.draw.line(screen, data.BRANCO, (data.OUTER_AREA_WIDTH , data.OUTER_AREA_HEIGHT + (data.PLAY_FIELD_HEIGHT - data.GOAL_WIDTH) // 2 - 5 * data.SCALE), (data.OUTER_AREA_WIDTH - data.GOAL_DEPTH + 20 * data.SCALE, data.OUTER_AREA_HEIGHT + (data.PLAY_FIELD_HEIGHT - data.GOAL_WIDTH) // 2 - 5 * data.SCALE), width= data.LINE_WIDTH)
@@ -47,12 +53,19 @@ class Field:
             16 * data.SCALE * 2,
             16 * data.SCALE * 2
         ), 1.5 * 3.14, 2 * 3.14, width= data.LINE_WIDTH)
-        
-        pygame.draw.rect(screen, data.AMARELO, (
+
+        pygame.draw.rect(screen, data.AMARELO_ESCURO, (
                 data.OUTER_AREA_WIDTH - data.GOAL_DEPTH,
                 data.OUTER_AREA_HEIGHT + (data.PLAY_FIELD_HEIGHT - data.GOAL_WIDTH) // 2,
                 data.GOAL_DEPTH,
                 data.GOAL_WIDTH
+            ))
+        
+        pygame.draw.rect(screen, data.AMARELO, (
+                data.OUTER_AREA_WIDTH - data.GOAL_DEPTH + 2 * data.SCALE,
+                data.OUTER_AREA_HEIGHT + (data.PLAY_FIELD_HEIGHT - data.GOAL_WIDTH) // 2 + 2 * data.SCALE,
+                data.GOAL_DEPTH - 2 * data.SCALE,
+                data.GOAL_WIDTH - 4 * data.SCALE
             ))
         
         pygame.draw.line(screen, data.BRANCO, (data.OUTER_AREA_WIDTH + data.PLAY_FIELD_WIDTH - 11 * data.SCALE, data.OUTER_AREA_HEIGHT + (data.PLAY_FIELD_HEIGHT - data.GOAL_WIDTH) // 2 - 5 * data.SCALE), (data.OUTER_AREA_WIDTH + data.PLAY_FIELD_WIDTH - 1 * data.SCALE, data.OUTER_AREA_HEIGHT + (data.PLAY_FIELD_HEIGHT - data.GOAL_WIDTH) // 2 - 5 * data.SCALE), width= data.LINE_WIDTH)
