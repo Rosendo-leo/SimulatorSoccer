@@ -1,6 +1,9 @@
 import math
 import pygame
+import random
 import data
+
+NEUTRAL = [(52, 27),(-52, -27),(-52, 27),(52, -27)]
 
 class Ball:
     def __init__(self, x, y, vel_max, raid, mass, color):
@@ -19,6 +22,7 @@ class Ball:
 
         self.robots = None
         self.goalWall = None
+        self.t = 0
 
     def resize(self, k):
         self.raid *= k
@@ -64,6 +68,22 @@ class Ball:
             dist = math.sqrt((point_x - cx)**2 + (point_y - cy)**2)
             if dist <= self.raid: ans = False
         return ans
+    
+    def setNeutral(self):
+         i = random.randrange(0,3)
+         self.x = NEUTRAL[i][0] * data.SCALE
+         self.y = NEUTRAL[i][1] * data.SCALE
+         self.vel_x = 0
+         self.vel_y = 0
+    
+    def rule(self):
+        if(abs(self.x) >= 193 * data.SCALE/2 or abs(self.y) >= 132 * data.SCALE/2):
+            self.t += 1
+            if(self.t >= 5 * 60):
+                self.t = 0
+                self.setNeutral()
+        else:
+            self.t = 0
 
     def move(self):
         if abs(self.x + self.vel_x) <= 220 * data.SCALE/2 and self.isFree(self.x + self.vel_x, self.y + self.vel_y): self.x += self.vel_x

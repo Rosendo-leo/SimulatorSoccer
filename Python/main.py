@@ -1,7 +1,6 @@
 import pygame
 import tkinter as tk
 import threading
-from datetime import timedelta
 from control import Control
 from ball import Ball
 from robot import Robot
@@ -79,6 +78,7 @@ while running:
 
     ball.collision(robot)
     ball.move()
+    ball.rule()
     if ball.goal(goals):
         ball.reset()
         for r in robot: r.reset()
