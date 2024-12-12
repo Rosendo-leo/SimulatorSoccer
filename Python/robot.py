@@ -27,17 +27,13 @@ class Robot():
         self.value = None
         self.robots = None
         self.goal = None
+        self.aux = None
+
+        self.angles = [360/(data.N_COLOR)*i for i in range(data.N_COLOR)]
 
     def resize(self, k):
         self.vel_max *= k
         self.raid *= k
-
-    def sensor(self, ball):
-        delta_x = ball.x - self.x
-        delta_y = ball.y - self.y
-        angBall = math.degrees(math.atan2(delta_y, delta_x))
-
-        self.value = [self.y/data.SCALE, self.x/data.SCALE, math.sqrt((self.x - ball.x) ** 2 + (self.y - ball.y) ** 2), angBall]
 
     def reset(self):
         self.x = self.x_i
@@ -53,6 +49,38 @@ class Robot():
 
     def setGoal(self, goal):
         self.goal = goal
+
+    def setAux(self, aux):
+        self.aux = aux
+
+    def colorsensor(self):
+        values = []
+        for angle in self.angles:
+            x = int(self.x + self.raid * math.cos(angle))
+            y = int(self.y + self.raid * math.sin(angle))
+            color = self.aux.get_at((x, y))
+            if color[:3] == (255,255,255): values.append(1)
+            else: values.append(0)
+        coss = 0
+        sens = 0
+        total = 0
+        for i,p in enumerate(values):
+            if p == 1:
+                coss += math.cos(math.radians(self.angles[i]))
+                sens += math.sin(math.radians(self.angles[i]))
+            total += 1
+        if total > 0: 
+            coss /= total
+            sens /= total
+        return int(math.atan2(sens,coss)*180/math.pi)
+
+    def sensor(self, ball):
+        delta_x = ball.x - self.x
+        delta_y = ball.y - self.y
+        angBall = math.degrees(math.atan2(delta_y, delta_x))
+        line = self.colorsensor()
+
+        self.value = [self.y/data.SCALE, self.x/data.SCALE, math.sqrt((self.x - ball.x) ** 2 + (self.y - ball.y) ** 2), angBall, line]
 
     def attack(self):
         dist = 1

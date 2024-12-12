@@ -40,6 +40,7 @@ goals = [field.goalBlue(), field.goalYellow()]
 collisionGoal = [field.goalBlueWall(), field.goalYellowWall()]
 robot_b.setGoal(collisionGoal)
 ball.setGoal(collisionGoal)
+robot_b.setAux(aux_layer)
 # 52   27
 
 thread.start()
