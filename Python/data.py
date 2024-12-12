@@ -41,3 +41,4 @@ LINE_WIDTH = 1 * SCALE
 
 COL_P = 0.8
 COL_W = 0.8
+e = 0.9

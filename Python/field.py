@@ -4,6 +4,38 @@ import pygame
 class Field:
     def __init__(self):
         self.col = 0
+
+    def goalYellow(self):
+        return pygame.Rect(
+                data.OUTER_AREA_WIDTH - data.GOAL_DEPTH + 2 * data.SCALE,
+                data.OUTER_AREA_HEIGHT + (data.PLAY_FIELD_HEIGHT - data.GOAL_WIDTH) // 2 + 2 * data.SCALE,
+                data.GOAL_DEPTH - 2 * data.SCALE,
+                data.GOAL_WIDTH - 4 * data.SCALE
+            )
+    
+    def goalBlue(self):
+        return pygame.Rect(
+                data.OUTER_AREA_WIDTH + data.PLAY_FIELD_WIDTH,
+                data.OUTER_AREA_HEIGHT + (data.PLAY_FIELD_HEIGHT - data.GOAL_WIDTH) // 2 + 2 * data.SCALE,
+                data.GOAL_DEPTH - 2 * data.SCALE,
+                data.GOAL_WIDTH - 4 * data.SCALE
+            )
+    
+    def goalYellowWall(self):
+        return pygame.Rect(
+                data.OUTER_AREA_WIDTH - data.GOAL_DEPTH,
+                data.OUTER_AREA_HEIGHT + (data.PLAY_FIELD_HEIGHT - data.GOAL_WIDTH) // 2,
+                data.GOAL_DEPTH + 2 * data.SCALE,
+                data.GOAL_WIDTH
+            )
+    
+    def goalBlueWall(self):
+        return pygame.Rect(
+                data.OUTER_AREA_WIDTH + data.PLAY_FIELD_WIDTH,
+                data.OUTER_AREA_HEIGHT + (data.PLAY_FIELD_HEIGHT - data.GOAL_WIDTH) // 2,
+                data.GOAL_DEPTH + 2 * data.SCALE,
+                data.GOAL_WIDTH
+            )
     
     def draw(self, screen):
         pygame.draw.rect(screen, data.VERDE, (
