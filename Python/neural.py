@@ -15,9 +15,8 @@ class ActorCritic(nn.Module):
             nn.Linear(128, 128),
             nn.ReLU(),
             nn.Linear(128, action_dim),
-            nn.Tanh()  # Saídas normalizadas entre -1 e 1
+            nn.Tanh()
         )
-        # Rede de valor (estimação do estado)
         self.value = nn.Sequential(
             nn.Linear(128, 128),
             nn.ReLU(),
