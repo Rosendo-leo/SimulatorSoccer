@@ -105,8 +105,18 @@ class Robot():
     def attack(self):
         dist = 1
         ball_angle = self.value[3]
+        line_angle = self.value[5]
+        view = self.value[4]
         angle = self.ang
         power = 100
+        """
+        if view:
+            x = int(-math.sin(line_angle) * power)
+            y = int(-math.cos(line_angle) * power)
+            x = maps(x, -100, 100, -self.vel_max, self.vel_max)
+            y = maps(y, -100, 100, -self.vel_max, self.vel_max)
+        else:
+        """
         Mov_Angle = abs(ball_angle)
         if Mov_Angle < 10:
             Mov_Angle = 0
@@ -119,7 +129,7 @@ class Robot():
         elif Mov_Angle <= 180:
             Mov_Angle = maps(Mov_Angle, 130, 180, 155, 270)
         if angle <= 0: Mov_Angle *= -1
-        x = -int(math.sin((Mov_Angle * math.pi / 180.0))  * power * dist)
+        x = int(math.sin((Mov_Angle * math.pi / 180.0))  * power * dist)
         y = -int(math.cos((Mov_Angle * math.pi / 180.0))  * power * dist)
         x = maps(x, -100, 100, -self.vel_max, self.vel_max)
         y = maps(y, -100, 100, -self.vel_max, self.vel_max)

@@ -20,29 +20,28 @@ screen = pygame.display.set_mode((data.screen_W, data.screen_H), pygame.RESIZABL
 aux_layer = pygame.Surface((data.screen_W, data.screen_H))
 pygame.display.set_caption("Campo Simulado - Aperture")
 clock = pygame.time.Clock()
-
 logo = pygame.image.load("Python/logo.png")
 pygame.display.set_icon(logo)
 
 robot = []
 robot_b = Robot(-30, 0, 0, 3.3, data.DIA_ROBOT/2, 40, data.ROXO)
 robot.append(robot_b)
-robot_r = Robot(30, 0, 180, 3.3, data.DIA_ROBOT/2, 40, data.VERMELHO)
-robot.append(robot_r)
 
 ball = Ball(0, 0, 3.5, data.DIA_BALL/2, 5, data.LARANJA)
 robot.append(ball)
+
 robot_b.setRobots(robot)
-robot_r.setRobots(robot)
 ball.setRobots(robot)
+
 field = Field()
 field.draw(aux_layer)
 goals = [field.goalBlue(), field.goalYellow()]
 collisionGoal = [field.goalBlueWall(), field.goalYellowWall()]
+
 robot_b.setGoal(collisionGoal)
 ball.setGoal(collisionGoal)
 
-thread.start()
+#thread.start()
 
 running = True
 while running:
@@ -73,7 +72,6 @@ while running:
         vel_ang = 0.1
 
     robot_b.sensor(ball, aux_layer)
-    #robot_r.attack()
     robot_b.move(vel_x, vel_y, vel_ang)
 
     ball.collision(robot)
