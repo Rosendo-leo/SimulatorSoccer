@@ -20,6 +20,7 @@ DIA_ROBOT = 18
 DIA_BALL =  4.3
 DIA_COLOR = 14
 N_COLOR = 32
+ERROR = 3
 
 screen_W = 1920
 screen_H = 1000

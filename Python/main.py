@@ -36,12 +36,11 @@ robot_b.setRobots(robot)
 robot_r.setRobots(robot)
 ball.setRobots(robot)
 field = Field()
+field.draw(aux_layer)
 goals = [field.goalBlue(), field.goalYellow()]
 collisionGoal = [field.goalBlueWall(), field.goalYellowWall()]
 robot_b.setGoal(collisionGoal)
 ball.setGoal(collisionGoal)
-robot_b.setAux(aux_layer)
-# 52   27
 
 thread.start()
 
@@ -73,7 +72,7 @@ while running:
     if teclas[pygame.K_e]:
         vel_ang = 0.1
 
-    robot_r.sensor(ball)
+    robot_b.sensor(ball, aux_layer)
     #robot_r.attack()
     robot_b.move(vel_x, vel_y, vel_ang)
 
@@ -86,7 +85,7 @@ while running:
 
     screen.fill(data.PRETO)
     field.draw(screen)
-    field.draw(aux_layer)
+    
     for r in robot: r.draw(screen)
     ball.draw(screen)
 

@@ -1,5 +1,6 @@
 import math
 import pygame
+import random
 import data
 
 def maps(x, in_min, in_max, out_min, out_max):
@@ -27,7 +28,6 @@ class Robot():
         self.value = None
         self.robots = None
         self.goal = None
-        self.aux = None
 
         self.angles = [360/(data.N_COLOR)*i for i in range(data.N_COLOR)]
 
@@ -50,37 +50,57 @@ class Robot():
     def setGoal(self, goal):
         self.goal = goal
 
-    def setAux(self, aux):
-        self.aux = aux
+    def error(self, value):
+        i = random.randrange(-data.ERROR,data.ERROR)
+        return value + i
 
-    def colorsensor(self):
+    def colorsensor(self, aux):
         values = []
-        for angle in self.angles:
-            x = int(self.x + self.raid * math.cos(angle))
-            y = int(self.y + self.raid * math.sin(angle))
-            color = self.aux.get_at((x, y))
-            if color[:3] == (255,255,255): values.append(1)
-            else: values.append(0)
+        dynamic_angles = [angle + self.ang for angle in self.angles]
+        for angle in dynamic_angles:
+            x = int(self.x + data.CENTER_W + self.raid * math.cos(math.radians(angle)))
+            y = int(self.y + data.CENTER_H + self.raid * math.sin(math.radians(angle)))
+            view = False
+            for dx, dy in [ 
+                (0, 0), (1, 0), (-1, 0), (0, 1), (0, -1),
+                (1, 1), (-1, -1), (1, -1), (-1, 1)
+            ]:
+                nx, ny = x + dx, y + dy
+                if 0 <= nx < aux.get_width() and 0 <= ny < aux.get_height():
+                    if aux.get_at((nx, ny)) == data.BRANCO:
+                        view = True
+                        break  
+            values.append(1 if view else 0)
         coss = 0
         sens = 0
         total = 0
-        for i,p in enumerate(values):
+        for i, p in enumerate(values):
             if p == 1:
-                coss += math.cos(math.radians(self.angles[i]))
-                sens += math.sin(math.radians(self.angles[i]))
-            total += 1
-        if total > 0: 
+                angle_radians = math.radians(dynamic_angles[i])
+                coss += math.cos(angle_radians)
+                sens += math.sin(angle_radians)
+                total += 1
+        if total > 0:
             coss /= total
             sens /= total
-        return int(math.atan2(sens,coss)*180/math.pi)
+            angle = int(math.degrees(math.atan2(sens, coss)))
+        else:
+            angle = 0 
+        return 1 if total > 0 else 0, angle
 
-    def sensor(self, ball):
-        delta_x = ball.x - self.x
-        delta_y = ball.y - self.y
-        angBall = math.degrees(math.atan2(delta_y, delta_x))
-        line = self.colorsensor()
+    def sensor(self, ball, aux):
+        x = self.error(self.y/data.SCALE)
+        y = self.error(self.x/data.SCALE)
+        dist = self.error(math.sqrt((x - ball.x/data.SCALE) ** 2 + (y - ball.y/data.SCALE) ** 2))
+        delta_x = ball.x/data.SCALE - x
+        delta_y = ball.y/data.SCALE - y
+        angBall = self.error(math.degrees(math.atan2(delta_y, delta_x)))
+        color = self.colorsensor(aux)
+        view = color[0]
+        line = self.error(color[1])
 
-        self.value = [self.y/data.SCALE, self.x/data.SCALE, math.sqrt((self.x - ball.x) ** 2 + (self.y - ball.y) ** 2), angBall, line]
+        self.value = [int(x), int(y), int(self.ang), int(dist), int(angBall), view, int(line)]
+        print(self.value)
 
     def attack(self):
         dist = 1
@@ -127,6 +147,7 @@ class Robot():
         if(self.vel_max >= abs(self.vel_ang + vel_ang * data.ACC_A)): self.vel_ang += vel_ang * data.ACC_A
 
         self.ang += self.vel_ang
+        self.ang = ((self.ang+180)%360)-180
         self.ang_rel += self.vel_ang
         x = self.vel_x * math.cos(math.radians(self.ang)) - self.vel_y * math.sin(math.radians(self.ang)) + self.x
         y = self.vel_x * math.sin(math.radians(self.ang)) + self.vel_y * math.cos(math.radians(self.ang)) + self.y
