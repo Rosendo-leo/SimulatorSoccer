@@ -22,6 +22,7 @@ class Ball:
 
         self.robots = None
         self.goalWall = None
+        self.goals = None
         self.t = 0
 
     def resize(self, k):
@@ -37,14 +38,17 @@ class Ball:
     def setRobots(self, robots):
         self.robots = robots
 
-    def setGoal(self, goalWall):
+    def setGoal(self, goal):
+        self.goals = goal
+
+    def setGoalWall(self, goalWall):
         self.goalWall = goalWall
 
-    def goal(self, goals):
+    def goal(self):
         ans = False
         cx = self.x + data.CENTER_W
         cy = self.y + data.CENTER_H
-        for rect in goals:
+        for rect in self.goals:
             point_x = max(rect.left, min(cx, rect.right))
             point_y = max(rect.top, min(cy, rect.bottom))
         

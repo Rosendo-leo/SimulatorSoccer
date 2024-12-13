@@ -43,6 +43,7 @@ class Robot():
 
         self.vel_x = 0
         self.vel_y = 0
+        self.vel_ang = 0
 
     def setRobots(self, robots):
         self.robots = robots
@@ -99,8 +100,7 @@ class Robot():
         view = color[0]
         line = self.error(color[1])
 
-        self.value = [int(x), int(y), int(self.ang), int(dist), int(angBall), view, int(line)]
-        print(self.value)
+        self.value = [int(x), int(y), int(self.ang), int(dist), int(angBall), view, int(line), int(self.vel_x), int(self.vel_y), int(self.vel_ang)]
 
     def attack(self):
         dist = 1

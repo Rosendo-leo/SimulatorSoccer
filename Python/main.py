@@ -8,6 +8,12 @@ from field import Field
 import data
 import math
 
+import torch
+import torch.nn as nn
+import torch.optim as optim
+from torch.distributions import Normal
+import neural
+
 def open_control():
     root = tk.Tk()
     control = Control(root)
@@ -39,11 +45,14 @@ goals = [field.goalBlue(), field.goalYellow()]
 collisionGoal = [field.goalBlueWall(), field.goalYellowWall()]
 
 robot_b.setGoal(collisionGoal)
-ball.setGoal(collisionGoal)
+ball.setGoalWall(collisionGoal)
+ball.setGoal(goals)
 
 #thread.start()
 
 running = True
+running_neural = True
+n = 0
 while running:
     last_W, last_H = data.screen_W, data.screen_H
     for event in pygame.event.get():
@@ -52,42 +61,52 @@ while running:
         elif event.type == pygame.VIDEORESIZE:
             screen_W, screen_H = event.size
             screen = pygame.display.set_mode((data.screen_W, data.screen_H), pygame.RESIZABLE)
-
-    teclas = pygame.key.get_pressed()
-    vel_x = 0
-    vel_y = 0
-    vel_ang = 0
     
-    if teclas[pygame.K_w]:
-        vel_y = 0.1
-    if teclas[pygame.K_s]:
-        vel_y = -0.1
-    if teclas[pygame.K_a]:
-        vel_x = -0.1
-    if teclas[pygame.K_d]:
-        vel_x = 0.1
-    if teclas[pygame.K_q]:
-        vel_ang = -0.1
-    if teclas[pygame.K_e]:
-        vel_ang = 0.1
+    if not(running_neural):
+        teclas = pygame.key.get_pressed()
+        vel_x = 0
+        vel_y = 0
+        vel_ang = 0
+        
+        if teclas[pygame.K_w]:
+            vel_y = 0.1
+        if teclas[pygame.K_s]:
+            vel_y = -0.1
+        if teclas[pygame.K_a]:
+            vel_x = -0.1
+        if teclas[pygame.K_d]:
+            vel_x = 0.1
+        if teclas[pygame.K_q]:
+            vel_ang = -0.1
+        if teclas[pygame.K_e]:
+            vel_ang = 0.1
 
-    robot_b.sensor(ball, aux_layer)
-    robot_b.move(vel_x, vel_y, vel_ang)
+        robot_b.sensor(ball, aux_layer)
+        robot_b.move(vel_x, vel_y, vel_ang)
 
-    ball.collision(robot)
-    ball.move()
-    ball.rule()
-    if ball.goal(goals):
-        ball.reset()
+        ball.move()
+        ball.collision(robot)
+        ball.rule()
+        if ball.goal():
+            ball.reset()
+            for r in robot: r.reset()
+
+        screen.fill(data.PRETO)
+        field.draw(screen)
+        
+        for r in robot: r.draw(screen)
+        ball.draw(screen)
+
+        pygame.display.flip()
+    else:
+        n += 1
         for r in robot: r.reset()
+        model = neural.run(robot_b, ball, aux_layer)
+        for r in robot: r.reset()
+        if n >= 10: 
+            running_neural = False
+            torch.save(model.state_dict(), "modelo.pth")
 
-    screen.fill(data.PRETO)
-    field.draw(screen)
-    
-    for r in robot: r.draw(screen)
-    ball.draw(screen)
-
-    pygame.display.flip()
     clock.tick(60)
 
 pygame.quit()
