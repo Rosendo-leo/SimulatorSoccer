@@ -104,18 +104,17 @@ def calculate(robot, ball, action, aux):
     robot.move(action[0], action[1], action[2])
     robot.sensor(ball, aux)
     reward = -0.1
-    if abs(robot.x) >= 193 * data.SCALE/2 or abs(robot.y) >= 132 * data.SCALE/2:
-        reward -= 10
+    if abs(robot.x) >= 193 * data.SCALE/2 or abs(robot.y) >= 132 * data.SCALE/2: reward -= 10
     if ball.goal():
         done = True
         reward += 100
     else:
         done = False
     now = robot.value
-    if last[3] > now[3]: reward += 1
+    if last[3] > now[3]: reward += 2
     return  now, reward, done
 
-def run(robot, ball, aux, num_steps=200, gamma=0.99):
+def train(robot, ball, aux, num_steps=200, gamma=0.99):
     state_dim = 10  # Ex.: x, y, θ, dx, dy, ω
     action_dim = 3  # Velocidades x, y, angular
     model = ActorCritic(state_dim, action_dim)
@@ -158,3 +157,18 @@ def run(robot, ball, aux, num_steps=200, gamma=0.99):
     update_policy(model, optimizer, (states, actions, old_policies, advantages))
 
     return model
+
+def run(robot, ball, aux):
+    state_dim = 10  # Ex.: x, y, θ, dx, dy, ω
+    action_dim = 3  # Velocidades x, y, angular
+    model = ActorCritic(state_dim, action_dim)
+    
+    robot.sensor(ball, aux)
+    state = robot.value
+
+    policy, __ = model(torch.FloatTensor(state))
+    dist = Normal(policy, torch.ones_like(policy) * 0.1)
+    action = dist.sample()
+
+    return action
+    

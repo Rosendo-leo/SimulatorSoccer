@@ -14,6 +14,8 @@ import torch.optim as optim
 from torch.distributions import Normal
 import neural
 
+state_simulator = 0
+
 def open_control():
     root = tk.Tk()
     control = Control(root)
@@ -48,10 +50,11 @@ robot_b.setGoal(collisionGoal)
 ball.setGoalWall(collisionGoal)
 ball.setGoal(goals)
 
-#thread.start()
+thread.start()
+#model = torch.load('modelo.pth')
 
 running = True
-running_neural = True
+running_neural = False
 n = 0
 while running:
     last_W, last_H = data.screen_W, data.screen_H
@@ -61,28 +64,15 @@ while running:
         elif event.type == pygame.VIDEORESIZE:
             screen_W, screen_H = event.size
             screen = pygame.display.set_mode((data.screen_W, data.screen_H), pygame.RESIZABLE)
-    
+
     if not(running_neural):
         teclas = pygame.key.get_pressed()
         vel_x = 0
         vel_y = 0
         vel_ang = 0
-        
-        if teclas[pygame.K_w]:
-            vel_y = 0.1
-        if teclas[pygame.K_s]:
-            vel_y = -0.1
-        if teclas[pygame.K_a]:
-            vel_x = -0.1
-        if teclas[pygame.K_d]:
-            vel_x = 0.1
-        if teclas[pygame.K_q]:
-            vel_ang = -0.1
-        if teclas[pygame.K_e]:
-            vel_ang = 0.1
 
-        robot_b.sensor(ball, aux_layer)
-        robot_b.move(vel_x, vel_y, vel_ang)
+        vel = neural.run(robot_b, ball, aux_layer)
+        robot_b.move(vel[0], vel[1], vel[2])
 
         ball.move()
         ball.collision(robot)
@@ -101,7 +91,7 @@ while running:
     else:
         n += 1
         for r in robot: r.reset()
-        model = neural.run(robot_b, ball, aux_layer)
+        model = neural.train(robot_b, ball, aux_layer)
         for r in robot: r.reset()
         if n >= 10: 
             running_neural = False

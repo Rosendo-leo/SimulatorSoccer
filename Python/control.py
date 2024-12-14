@@ -17,7 +17,7 @@ class Control:
         button = tk.Button(root, text="Parar", command=self.stop)
         button.pack(pady=10)
 
-        self.label = tk.Label(root, text="00:00:00", font=("Helvetica", 35))
+        self.label = tk.Label(root, text="00:00:00", font=("Helvetica", 15))
         self.label.pack(pady=20)
 
         self.update_clock()
@@ -36,3 +36,9 @@ class Control:
         self.running = False
         self.elapsed_time = timedelta()
         self.label.config(text="00:00:00")
+
+    def state(self):
+        return 0
+    
+    def stop_running(self):
+        return 0

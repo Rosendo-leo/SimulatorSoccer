@@ -109,14 +109,6 @@ class Robot():
         view = self.value[4]
         angle = self.ang
         power = 100
-        """
-        if view:
-            x = int(-math.sin(line_angle) * power)
-            y = int(-math.cos(line_angle) * power)
-            x = maps(x, -100, 100, -self.vel_max, self.vel_max)
-            y = maps(y, -100, 100, -self.vel_max, self.vel_max)
-        else:
-        """
         Mov_Angle = abs(ball_angle)
         if Mov_Angle < 10:
             Mov_Angle = 0
@@ -152,6 +144,9 @@ class Robot():
         return ans
 
     def move(self, vel_y, vel_x, vel_ang):
+        vel_x = round(float(vel_x), 4)
+        vel_y = round(float(vel_y), 4)
+        vel_ang = round(float(vel_ang), 4)
         if(self.vel_max >= abs(self.vel_x + vel_x * data.ACC_P)): self.vel_x += vel_x * data.ACC_P
         if(self.vel_max >= abs(self.vel_y + vel_y * data.ACC_P)): self.vel_y += vel_y * data.ACC_P
         if(self.vel_max >= abs(self.vel_ang + vel_ang * data.ACC_A)): self.vel_ang += vel_ang * data.ACC_A
