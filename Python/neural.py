@@ -39,8 +39,19 @@ def compute_advantages(rewards, values, gamma=0.99, lam=0.95):
         advantages.insert(0, gae)
     return advantages
 
-def compute_ppo_loss(policy, old_policy, action, advantage, epsilon=0.2):
-    ratio = (policy / old_policy).gather(1, action)
+def compute_ppo_loss(policy, old_policy, actions, advantage, epsilon=0.2):
+    # Certificar-se de que 'actions' está no formato correto
+    actions = (actions + 1).long().view(-1, 1)  # Mapeia -1, 0, 1 para 0, 1, 2
+
+    # Validar as dimensões
+    if actions.size(0) != policy.size(0):
+        actions = actions[:policy.size(0)]
+
+    # Garantir que os índices estão no intervalo válido
+    if actions.min() < 0 or actions.max() >= policy.size(1):
+        raise ValueError(f"Invalid action index: {actions.min().item()} to {actions.max().item()}, "
+                         f"but policy supports indices in [0, {policy.size(1) - 1}]")
+    ratio = (policy / old_policy).gather(1, actions)
     clipped_ratio = torch.clamp(ratio, 1 - epsilon, 1 + epsilon)
     loss_clip = torch.min(ratio * advantage, clipped_ratio * advantage).mean()
     return -loss_clip
@@ -56,7 +67,7 @@ def compute_returns(rewards, gamma=0.99):
 def update_policy(model, optimizer, trajectory, epsilon=0.2):
     states, actions, old_policies, advantages = trajectory
     optimizer.zero_grad()
-    policy, value = model(torch.FloatTensor(states))
+    policy, __ = model(states)
     loss = compute_ppo_loss(policy, old_policies, actions, advantages, epsilon)
     loss.backward()
     optimizer.step()
@@ -132,13 +143,16 @@ def run(robot, ball, aux, num_steps=200, gamma=0.99):
      # Calcular retornos e vantagens
     trajectory["values"].append(0)  # Valor do estado terminal
     returns = compute_returns(trajectory["rewards"], gamma)
-    advantages = compute_advantages(trajectory["rewards"], trajectory["values"], gamma)
+    advantages = torch.FloatTensor(compute_advantages(trajectory["rewards"], trajectory["values"], gamma))
 
     # Transformar os dados para tensores
     states = torch.FloatTensor(trajectory["states"])
-    actions = torch.cat(trajectory["actions"])
+    actions = torch.stack(trajectory["actions"])
     actions = actions.long()
+
     old_policies = torch.FloatTensor(trajectory["old_policies"])
+    print(states.shape, actions.shape, old_policies.shape, advantages.shape)
+
     
     # Atualizar a rede neural
     update_policy(model, optimizer, (states, actions, old_policies, advantages))
