@@ -2,7 +2,7 @@ import tkinter as tk
 from datetime import timedelta
 
 class Control:
-    def __init__(self, root):
+    def __init__(self, root) -> None:
         self.root = root
         self.root.title("Controle")
         root.geometry("400x300")
@@ -22,17 +22,17 @@ class Control:
 
         self.update_clock()
 
-    def update_clock(self):
+    def update_clock(self) -> None:
         if self.running:
             self.elapsed_time += timedelta(seconds=1)
             self.label.config(text=str(self.elapsed_time).split(".")[0])
         self.root.after(1000, self.update_clock)
 
-    def start(self):
+    def start(self) -> None:
         if not self.running:
             self.running = True
 
-    def stop(self):
+    def stop(self) -> None:
         self.running = False
         self.elapsed_time = timedelta()
         self.label.config(text="00:00:00")

@@ -30,18 +30,17 @@ class ActorCritic(nn.Module):
         return self.policy(x), self.value(x)
 
 def compute_advantages(rewards, values, gamma=0.99, lam=0.95):
-    # GAE (Generalized Advantage Estimation)
-    advantages = []
+    advantages = torch.zeros(len(rewards))
     gae = 0
     for t in reversed(range(len(rewards))):
         delta = rewards[t] + gamma * values[t + 1] - values[t]
         gae = delta + gamma * lam * gae
-        advantages.insert(0, gae)
+        advantages[t] = gae
     return advantages
 
-def compute_ppo_loss(policy, old_policy, actions, advantage, epsilon=0.2):
-    # Certificar-se de que 'actions' está no formato correto
-    actions = (actions + 1).long().view(-1, 1)  # Mapeia -1, 0, 1 para 0, 1, 2
+def compute_ppo_loss(policy, old_policy, actions, advantages, epsilon=0.2):
+    # Certificar-se de que as ações estão normalizadas
+    actions = ((actions + 1) / 2 * (policy.size(1) - 1)).long().view(-1, 1)
 
     # Validar as dimensões
     if actions.size(0) != policy.size(0):
@@ -51,79 +50,66 @@ def compute_ppo_loss(policy, old_policy, actions, advantage, epsilon=0.2):
     if actions.min() < 0 or actions.max() >= policy.size(1):
         raise ValueError(f"Invalid action index: {actions.min().item()} to {actions.max().item()}, "
                          f"but policy supports indices in [0, {policy.size(1) - 1}]")
+
+    # Cálculo da razão de probabilidade
     ratio = (policy / old_policy).gather(1, actions)
     clipped_ratio = torch.clamp(ratio, 1 - epsilon, 1 + epsilon)
-    loss_clip = torch.min(ratio * advantage, clipped_ratio * advantage).mean()
+    loss_clip = torch.min(ratio * advantages, clipped_ratio * advantages).mean()
     return -loss_clip
 
 def compute_returns(rewards, gamma=0.99):
-    returns = []
+    returns = torch.zeros(len(rewards))
     G = 0
-    for r in reversed(rewards):
-        G = r + gamma * G
-        returns.insert(0, G)
-    return torch.FloatTensor(returns)
+    for t in reversed(range(len(rewards))):
+        G = rewards[t] + gamma * G
+        returns[t] = G
+    return returns
 
 def update_policy(model, optimizer, trajectory, epsilon=0.2):
     states, actions, old_policies, advantages = trajectory
     optimizer.zero_grad()
-    policy, __ = model(states)
+    policy_logits, _ = model(states)
+
+    # Converter logits em probabilidades
+    if policy_logits.dim() == 1:
+        policy = torch.softmax(policy_logits, dim=0)
+    else:
+        policy = torch.softmax(policy_logits, dim=1)
+
     loss = compute_ppo_loss(policy, old_policies, actions, advantages, epsilon)
     loss.backward()
     optimizer.step()
 
-def ppo_update(trajectory, model, optimizer, clip_param=0.2, epochs=10):
-    states, actions, rewards, old_probs, values = trajectory
-
-    for _ in range(epochs):
-        policy, new_values = model(states)
-        dist = Normal(policy, torch.ones_like(policy) * 0.1)
-        new_probs = dist.log_prob(actions).sum(dim=1)
-
-        # Razão de probabilidades
-        ratio = torch.exp(new_probs - old_probs)
-
-        # Loss de PPO
-        advantages = torch.tensor(compute_advantages(rewards, values))
-        surr1 = ratio * advantages
-        surr2 = torch.clamp(ratio, 1 - clip_param, 1 + clip_param) * advantages
-        policy_loss = -torch.min(surr1, surr2).mean()
-
-        # Loss de valor
-        value_loss = nn.MSELoss()(new_values, torch.tensor(rewards))
-
-        # Loss total
-        loss = policy_loss + 0.5 * value_loss
-
-        optimizer.zero_grad()
-        loss.backward()
-        optimizer.step()
-
 def calculate(robot, ball, action, aux):
-    last = robot.value
     robot.move(action[0], action[1], action[2])
     robot.sensor(ball, aux)
-    reward = -0.1
-    if abs(robot.x) >= 193 * data.SCALE/2 or abs(robot.y) >= 132 * data.SCALE/2: reward -= 10
+    reward = -2
+    if abs(robot.x) >= 193 * data.SCALE / 2 or abs(robot.y) >= 132 * data.SCALE / 2:
+        reward -= 10
     if ball.goal():
         done = True
-        reward += 100
+        reward += 200
     else:
         done = False
     now = robot.value
-    if last[3] > now[3]: reward += 2
-    return  now, reward, done
+    reward += now[3]*0.01
+    return now, reward, done
 
-def train(robot, ball, aux, num_steps=200, gamma=0.99):
-    state_dim = 10  # Ex.: x, y, θ, dx, dy, ω
-    action_dim = 3  # Velocidades x, y, angular
-    model = ActorCritic(state_dim, action_dim)
-    optimizer = optim.Adam(model.parameters(), lr=0.0003)
+def train(robot, ball, aux, model, num_steps=800, gamma=0.99):
+    optimizer = optim.Adam(model.parameters(), lr=0.001)
     robot.sensor(ball, aux)
     state = robot.value
     trajectory = {"states": [], "actions": [], "old_policies": [], "rewards": [], "values": []}
+
     for t in range(num_steps):
-        policy, value = model(torch.FloatTensor(state))
+        policy_logits, value = model(torch.FloatTensor(state))
+
+        # Garantir formato correto das probabilidades
+        if policy_logits.dim() == 1:
+            policy = torch.softmax(policy_logits, dim=0)
+        else:
+            policy = torch.softmax(policy_logits, dim=1)
+
         dist = Normal(policy, torch.ones_like(policy) * 0.1)
         action = dist.sample()
 
@@ -131,44 +117,41 @@ def train(robot, ball, aux, num_steps=200, gamma=0.99):
 
         trajectory["states"].append(state)
         trajectory["actions"].append(action)
-        trajectory["old_policies"].append(policy.detach().numpy())
+        trajectory["old_policies"].append(policy.detach())
         trajectory["rewards"].append(reward)
         trajectory["values"].append(value.item())
 
         state = next_state
-        if done: 
+        if done:
             break
-        
-     # Calcular retornos e vantagens
+
+    # Calcular retornos e vantagens
     trajectory["values"].append(0)  # Valor do estado terminal
     returns = compute_returns(trajectory["rewards"], gamma)
-    advantages = torch.FloatTensor(compute_advantages(trajectory["rewards"], trajectory["values"], gamma))
+    advantages = compute_advantages(trajectory["rewards"], trajectory["values"], gamma)
 
     # Transformar os dados para tensores
     states = torch.FloatTensor(trajectory["states"])
     actions = torch.stack(trajectory["actions"])
-    actions = actions.long()
+    old_policies = torch.stack(trajectory["old_policies"])
 
-    old_policies = torch.FloatTensor(trajectory["old_policies"])
-    print(states.shape, actions.shape, old_policies.shape, advantages.shape)
-
-    
     # Atualizar a rede neural
     update_policy(model, optimizer, (states, actions, old_policies, advantages))
+    return sum(trajectory["rewards"])
 
-    return model
-
-def run(robot, ball, aux):
-    state_dim = 10  # Ex.: x, y, θ, dx, dy, ω
-    action_dim = 3  # Velocidades x, y, angular
-    model = ActorCritic(state_dim, action_dim)
-    
+def run(robot, ball, aux, model):
     robot.sensor(ball, aux)
     state = robot.value
 
-    policy, __ = model(torch.FloatTensor(state))
+    policy_logits, _ = model(torch.FloatTensor(state))
+
+    # Garantir formato correto das probabilidades
+    if policy_logits.dim() == 1:
+        policy = torch.softmax(policy_logits, dim=0)
+    else:
+        policy = torch.softmax(policy_logits, dim=1)
+
     dist = Normal(policy, torch.ones_like(policy) * 0.1)
     action = dist.sample()
 
     return action
-    

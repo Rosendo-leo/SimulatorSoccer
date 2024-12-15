@@ -14,6 +14,8 @@ import torch.optim as optim
 from torch.distributions import Normal
 import neural
 
+import matplotlib.pyplot as plt
+
 state_simulator = 0
 
 def open_control():
@@ -50,12 +52,16 @@ robot_b.setGoal(collisionGoal)
 ball.setGoalWall(collisionGoal)
 ball.setGoal(goals)
 
-thread.start()
-#model = torch.load('modelo.pth')
+#thread.start()
+
+state_dim = 10  # Ex.: x, y, θ, dx, dy, ω
+action_dim = 3  # Velocidades x, y, angular
+model = neural.ActorCritic(state_dim, action_dim)
 
 running = True
-running_neural = False
+running_neural = True
 n = 0
+a = []
 while running:
     last_W, last_H = data.screen_W, data.screen_H
     for event in pygame.event.get():
@@ -71,7 +77,7 @@ while running:
         vel_y = 0
         vel_ang = 0
 
-        vel = neural.run(robot_b, ball, aux_layer)
+        vel = neural.run(robot_b, ball, aux_layer, model)
         robot_b.move(vel[0], vel[1], vel[2])
 
         ball.move()
@@ -85,17 +91,21 @@ while running:
         field.draw(screen)
         
         for r in robot: r.draw(screen)
-        ball.draw(screen)
 
         pygame.display.flip()
+        
     else:
         n += 1
         for r in robot: r.reset()
-        model = neural.train(robot_b, ball, aux_layer)
+        result = neural.train(robot_b, ball, aux_layer, model)
+        print(n, round(result, 3))
+        a.append(result)
         for r in robot: r.reset()
-        if n >= 10: 
+        if n >= 500: 
             running_neural = False
             torch.save(model.state_dict(), "modelo.pth")
+            plt.plot(result)
+            plt.show()
 
     clock.tick(60)
 
