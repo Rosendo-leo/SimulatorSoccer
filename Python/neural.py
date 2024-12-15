@@ -4,6 +4,10 @@ import torch.optim as optim
 from torch.distributions import Normal
 import data
 
+reward = 0
+best_reward = 0
+mod=None
+
 class ActorCritic(nn.Module):
     def __init__(self, state_dim, action_dim):
         super(ActorCritic, self).__init__()
@@ -81,21 +85,31 @@ def update_policy(model, optimizer, trajectory, epsilon=0.2):
     optimizer.step()
 
 def calculate(robot, ball, action, aux):
+    global reward
+
+    #bx_y=(ball.x,ball.y)
     robot.move(action[0], action[1], action[2])
+    #if (ball.x,ball.y)==bx_y:reward-=20
     robot.sensor(ball, aux)
-    reward = -2
+    
     if abs(robot.x) >= 193 * data.SCALE / 2 or abs(robot.y) >= 132 * data.SCALE / 2:
         reward -= 10
     if ball.goal():
         done = True
-        reward += 200
+        reward += 200_000_000
     else:
         done = False
     now = robot.value
-    reward += now[3]*0.01
+
+    reward += 30//now[3]
     return now, reward, done
 
 def train(robot, ball, aux, model, num_steps=800, gamma=0.99):
+    global reward
+    global best_reward
+    global mod
+
+    reward=0
     optimizer = optim.Adam(model.parameters(), lr=0.001)
     robot.sensor(ball, aux)
     state = robot.value
@@ -124,6 +138,12 @@ def train(robot, ball, aux, model, num_steps=800, gamma=0.99):
         state = next_state
         if done:
             break
+    
+    rew=sum(trajectory["rewards"])
+
+    if rew>best_reward or mod==None:
+        best_reward=rew
+        mod=model
 
     # Calcular retornos e vantagens
     trajectory["values"].append(0)  # Valor do estado terminal
@@ -137,7 +157,8 @@ def train(robot, ball, aux, model, num_steps=800, gamma=0.99):
 
     # Atualizar a rede neural
     update_policy(model, optimizer, (states, actions, old_policies, advantages))
-    return sum(trajectory["rewards"])
+
+    return rew, mod, best_reward
 
 def run(robot, ball, aux, model):
     robot.sensor(ball, aux)

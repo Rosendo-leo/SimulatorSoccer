@@ -52,7 +52,7 @@ robot_b.setGoal(collisionGoal)
 ball.setGoalWall(collisionGoal)
 ball.setGoal(goals)
 
-#thread.start()
+thread.start()
 
 state_dim = 10  # Ex.: x, y, θ, dx, dy, ω
 action_dim = 3  # Velocidades x, y, angular
@@ -79,7 +79,7 @@ while running:
 
         vel = neural.run(robot_b, ball, aux_layer, model)
         robot_b.move(vel[0], vel[1], vel[2])
-
+        robot_b.move(vel_x, vel_y, vel_ang)
         ball.move()
         ball.collision(robot)
         ball.rule()
@@ -98,14 +98,14 @@ while running:
         n += 1
         for r in robot: r.reset()
         result = neural.train(robot_b, ball, aux_layer, model)
-        print(n, round(result, 3))
+        print(n, round(result[0], 3), round(result[2], 3))
+        model=result[1]
         a.append(result)
         for r in robot: r.reset()
-        if n >= 500: 
+        if n >= 100: 
             running_neural = False
             torch.save(model.state_dict(), "modelo.pth")
-            plt.plot(result)
-            plt.show()
+
 
     clock.tick(60)
 
