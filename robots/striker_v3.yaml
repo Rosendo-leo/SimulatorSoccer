@@ -1,0 +1,39 @@
+robot:
+  name: "Striker v3"
+  body:
+    shape: circle
+    radius: 0.11
+    mass: 1.1
+    max_speed: 1.5
+
+  wheels:
+    type: omnidirectional
+    count: 4
+    positions: [45, 135, 225, 315]
+
+  sensors:
+    ir_ring:
+      count: 16
+      range: 1.5
+      noise_std: 0.05
+
+    compass:
+      noise_std: 2.0
+
+    ultrasound:
+      count: 4
+      directions: [0, 90, 180, 270]
+      range: 2.0
+      noise_std: 0.03
+
+    line_sensors:
+      count: 4
+      positions:
+        - [0.10, 0.0]
+        - [-0.10, 0.0]
+        - [0.0, 0.10]
+        - [0.0, -0.10]
+
+  kicker:
+    force: 5.0
+    cooldown: 2.0

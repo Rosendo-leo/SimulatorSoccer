@@ -1,0 +1,39 @@
+robot:
+  name: "Goalkeeper v2"
+  body:
+    shape: circle
+    radius: 0.11
+    mass: 1.2
+    max_speed: 1.2
+
+  wheels:
+    type: omnidirectional
+    count: 4
+    positions: [45, 135, 225, 315]
+
+  sensors:
+    ir_ring:
+      count: 12
+      range: 2.0
+      noise_std: 0.04
+
+    compass:
+      noise_std: 1.5
+
+    ultrasound:
+      count: 3
+      directions: [0, 45, -45]
+      range: 2.5
+      noise_std: 0.02
+
+    line_sensors:
+      count: 4
+      positions:
+        - [0.09, 0.0]
+        - [-0.09, 0.0]
+        - [0.0, 0.09]
+        - [0.0, -0.09]
+
+  kicker:
+    force: 6.0
+    cooldown: 3.0
