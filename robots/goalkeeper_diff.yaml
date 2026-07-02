@@ -1,0 +1,41 @@
+robot:
+  name: "Goalkeeper Diff"
+  body:
+    shape: circle
+    radius: 0.11
+    mass: 1.3
+    max_speed: 1.0
+
+  wheels:
+    type: differential
+    count: 2
+    positions: [90, 270]
+
+  sensors:
+    ir_ring:
+      count: 8
+      range: 2.0
+      noise_std: 0.04
+
+    compass:
+      noise_std: 1.0
+
+    ultrasound:
+      count: 5
+      directions: [0, 45, -45, 90, -90]
+      range: 2.5
+      noise_std: 0.02
+
+    line_sensors:
+      count: 6
+      positions:
+        - [0.09, 0.0]
+        - [-0.09, 0.0]
+        - [0.0, 0.09]
+        - [0.0, -0.09]
+        - [0.06, 0.06]
+        - [0.06, -0.06]
+
+  kicker:
+    force: 7.0
+    cooldown: 3.0

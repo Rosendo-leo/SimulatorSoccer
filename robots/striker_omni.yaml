@@ -1,0 +1,39 @@
+robot:
+  name: "Striker Omni"
+  body:
+    shape: circle
+    radius: 0.10
+    mass: 1.0
+    max_speed: 1.8
+
+  wheels:
+    type: omnidirectional
+    count: 4
+    positions: [45, 135, 225, 315]
+
+  sensors:
+    ir_ring:
+      count: 16
+      range: 1.8
+      noise_std: 0.04
+
+    compass:
+      noise_std: 1.5
+
+    ultrasound:
+      count: 3
+      directions: [0, 45, -45]
+      range: 2.0
+      noise_std: 0.03
+
+    line_sensors:
+      count: 4
+      positions:
+        - [0.09, 0.0]
+        - [-0.09, 0.0]
+        - [0.0, 0.09]
+        - [0.0, -0.09]
+
+  kicker:
+    force: 6.0
+    cooldown: 1.5

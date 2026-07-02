@@ -20,6 +20,9 @@ server = [
     "uvicorn[standard]>=0.29",
     "websockets>=12.0",
 ]
+cpp = [
+    "pybind11>=2.12",
+]
 rl = [
     "gymnasium>=0.29",
     "stable-baselines3>=2.2",
@@ -30,4 +33,4 @@ rcj-sim = "sim.__main__:main"
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["sim*", "viewer*", "examples*"]
+include = ["sim*", "viewer*", "examples*", "bridge*"]

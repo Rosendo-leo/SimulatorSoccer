@@ -27,9 +27,9 @@ PENALTY_TICKS        = int(PENALTY_DURATION_S / PHYSICS_DT)   # 3 600 ticks
 _PENALTY_HOLD        = (0.0, -5.0)                   # parking coords (outside field)
 _OOB_MARGIN          = 0.01                          # 1 cm past boundary triggers penalty
 
-# Default kick-off positions
-_BLUE_STARTS   = [(-0.40, 0.0, 0.0)]
-_YELLOW_STARTS = [( 0.40, 0.0, math.pi)]
+# Default kick-off positions — slot 0 = attacker, slot 1 = keeper (2v2)
+_BLUE_STARTS   = [(-0.40, 0.0, 0.0),      (-0.90, 0.0, 0.0)]
+_YELLOW_STARTS = [( 0.40, 0.0, math.pi),  ( 0.90, 0.0, math.pi)]
 
 
 class _RobotEntry:

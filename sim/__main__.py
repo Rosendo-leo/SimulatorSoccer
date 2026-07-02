@@ -12,16 +12,20 @@ def main() -> None:
         description="RCJ Soccer Simulator — Phase 1",
     )
     parser.add_argument(
-        "--blue", default="robots/example.yaml",
-        metavar="YAML", help="Blue robot config (default: robots/example.yaml)",
+        "--blue", nargs="+", default=["robots/example.yaml"],
+        metavar="YAML", help="Blue robot config(s) — pass two files for 2v2",
     )
     parser.add_argument(
-        "--yellow", default=None,
-        metavar="YAML", help="Yellow robot config (optional, enables 1v1)",
+        "--yellow", nargs="+", default=None,
+        metavar="YAML", help="Yellow robot config(s) — pass two files for 2v2",
     )
     parser.add_argument(
         "--strategy", default="examples.simple_strategy",
         metavar="MODULE", help="Decision module exposing strategy(hal)",
+    )
+    parser.add_argument(
+        "--yellow-strategy", default=None,
+        metavar="MODULE", help="Strategy for the yellow team (default: same as --strategy)",
     )
     parser.add_argument(
         "--steps", type=int, default=None,
@@ -41,19 +45,24 @@ def main() -> None:
     )
     args = parser.parse_args()
 
-    # Resolve strategy
-    try:
-        mod = importlib.import_module(args.strategy)
-        strategy_fn = mod.strategy
-    except (ImportError, AttributeError) as exc:
-        sys.exit(f"Cannot load strategy '{args.strategy}': {exc}")
+    # Resolve strategies
+    def load_strategy(module_name: str):
+        try:
+            return importlib.import_module(module_name).strategy
+        except (ImportError, AttributeError) as exc:
+            sys.exit(f"Cannot load strategy '{module_name}': {exc}")
+
+    blue_strategy   = load_strategy(args.strategy)
+    yellow_strategy = (load_strategy(args.yellow_strategy)
+                       if args.yellow_strategy else blue_strategy)
 
     from sim.engine import SimEngine
 
     engine = SimEngine(seed=args.seed)
-    engine.add_robot(args.blue, team="blue", strategy_fn=strategy_fn)
-    if args.yellow:
-        engine.add_robot(args.yellow, team="yellow", strategy_fn=strategy_fn)
+    for yaml_path in args.blue:
+        engine.add_robot(yaml_path, team="blue", strategy_fn=blue_strategy)
+    for yaml_path in (args.yellow or []):
+        engine.add_robot(yaml_path, team="yellow", strategy_fn=yellow_strategy)
 
     if args.record:
         engine.start_recording(args.record)

@@ -13,34 +13,42 @@ Não é um fork do grSim (feito para SSL com visão global). É um simulador con
 | Componente | Tecnologia |
 |---|---|
 | Motor de física | Python + PyMunk (Chipmunk2D 2D top-down) |
-| Visualizador atual | Pygame (top-down 2D, dev/debug) |
-| Visualizador futuro | React + Three.js (3D, Fase 4) |
-| Config de robôs | YAML → parser Python |
-| HAL interface | Python ABC |
-| Bridge C++ (futuro) | pybind11 → `.so`/`.pyd` |
+| Visualizador debug | Pygame (top-down 2D) |
+| Visualizador 3D | React + Three.js (frontend/) — WebSocket ao vivo |
+| Robot Builder | React (frontend/, aba Builder) + FastAPI CRUD |
+| Config de robôs | YAML → parser Python com validação (`ConfigError`) |
+| HAL interface | Python ABC + wrapper C++ (`bridge/cpp/hal.hpp`) |
+| Bridge C++ | pybind11 → `.pyd`/`.so` (bridge/, compilado e testado) |
+| Comunicação | WebSocket JSON (FastAPI + uvicorn) — `server/main.py` |
 | Shell desktop (futuro) | Tauri 2.0 → `.exe` / `.AppImage` |
-| Comunicação (futuro) | WebSocket JSON (FastAPI + uvicorn) |
 | RL (futuro) | Gymnasium + Stable-Baselines3 + PettingZoo |
 
 ---
 
-## Arquitetura atual (Fase 1 + 2)
+## Arquitetura atual (Fases 1–3 + Fase 4 parcial)
 
 ```
-python -m sim
-    └── SimEngine (engine.py)
-          ├── PyMunk Space
+python -m sim                          uvicorn server.main:app
+    └── SimEngine (engine.py)  ◄──────────┤ (mesmo engine, loop asyncio)
+          ├── PyMunk Space               │
           │     ├── Field walls + goals (field.py)
-          │     ├── Ball body (ball.py)
+          │     ├── Ball body (ball.py)  │
           │     └── Robot bodies (robot.py)
           ├── Per-robot SimHAL (hal_sim.py)
           │     ├── Percepts: compute_all_percepts() (percepts.py)
           │     └── Actuators: set_velocity(), kick()
-          ├── Strategy functions (examples/)
-          ├── Penalty system
-          └── Recorder (recorder.py)
-    └── PygameViewer (viewer/pygame_viewer.py)
+          ├── Strategies: Python (examples/) ou C++ (bridge/*.pyd)
+          ├── Penalty system             │
+          └── Recorder (recorder.py)     │
+    └── PygameViewer (debug 2D)          └── WebSocket /ws/sim
+                                              └── React frontend (frontend/)
+                                                    ├── Builder (form + SVG preview)
+                                                    └── SimViewer (Three.js 3D)
 ```
+
+**Bridge C++:** `bridge/cpp/attacker.cpp` expõe `strategy(hal)` via pybind11 — usável direto com `--strategy bridge.cpp_attacker`. Teste de paridade garante trajetória idêntica ao port Python com a mesma seed. Build: `cd bridge && python setup.py build_ext --inplace` (requer MSVC Build Tools / g++).
+
+**2v2:** `add_robot()` aceita N robôs; kickoff tem 2 slots por time (`_BLUE_STARTS`/`_YELLOW_STARTS`: atacante em ±0.40, goleiro em ±0.90). CLI: `--blue a.yaml b.yaml --yellow c.yaml d.yaml --yellow-strategy modulo`.
 
 ---
 
@@ -183,18 +191,19 @@ LINE_HALF_THICKNESS = 0.010 # 10 mm — tolerância de detecção de linha
 
 ---
 
-## Próximas fases
+## Status das fases
 
-### Fase 3 — Robot builder + C++ bridge
-- pybind11: código C++ do Arduino compilado como `.so` e chamado pelo engine
-- Suporte a 2v2
-- Parser YAML avançado com validação
+### Fase 3 — Robot builder + C++ bridge ✅ COMPLETA
+- ✅ pybind11: `bridge/cpp/attacker.cpp` compilado como `.pyd`, paridade testada
+- ✅ 2v2: kickoff slots, CLI multi-YAML, testes
+- ✅ Validação YAML: `ConfigError` com mensagem apontando o campo inválido
 
-### Fase 4 — Frontend 3D + Tauri
-- React + Three.js: campo 3D, robôs com modelo geométrico, bola
-- WebSocket server (FastAPI) publicando frames a cada tick
-- Empacotamento Tauri → `.exe` Windows + `.AppImage` Linux
-- Frontend idêntico na versão web (Vercel + sim no Oracle Cloud VPS)
+### Fase 4 — Frontend 3D + Tauri ⚠️ PARCIAL
+- ✅ React + Three.js: campo 3D, robôs, bola, HUD, câmera orbital
+- ✅ WebSocket server (FastAPI) publicando frames + comandos pause/resume/reset/speed/restart
+- ❌ Seleção de robôs/estratégias pela UI (comando `restart` já existe no WS)
+- ❌ Empacotamento Tauri → `.exe` Windows + `.AppImage` Linux
+- ❌ Deploy web (Vercel + sim no Oracle Cloud VPS)
 
 ### Fase 5 — Replay + editor de cenários
 - Recorder já implementado (JSON Lines); precisa de player no frontend
@@ -206,6 +215,10 @@ LINE_HALF_THICKNESS = 0.010 # 10 mm — tolerância de detecção de linha
 - Treino com Stable-Baselines3 (PPO)
 - PettingZoo para self-play 2v2
 
+### Pendências menores
+- Tick rate real do server ~42/s em vez de 60 (overhead do `asyncio.sleep` no Windows) — compensar com múltiplos steps por iteração
+- Viewer 3D usa raio fixo 0.11 m em vez de ler do config do robô
+
 ---
 
 ## Comandos úteis
@@ -216,13 +229,28 @@ python -m sim
 python -m sim --blue robots/striker_v3.yaml --yellow robots/goalkeeper_v2.yaml
 python -m sim --headless --steps 3600 --seed 42
 
+# 2v2 (dois YAMLs por time) + estratégia separada para o amarelo
+python -m sim --blue robots/striker_v3.yaml robots/goalkeeper_v2.yaml \
+              --yellow robots/striker_omni.yaml robots/goalkeeper_diff.yaml \
+              --yellow-strategy examples.defender_strategy
+
 # Estratégias
 python -m sim --strategy examples.attacker_strategy
 python -m sim --strategy examples.defender_strategy
+python -m sim --strategy bridge.cpp_attacker        # C++ compilado
 
-# Testes
+# Compilar bridge C++
+cd bridge && python setup.py build_ext --inplace
+
+# Servidor web + frontend
+uvicorn server.main:app --reload --port 8000
+cd frontend && npm run dev    # → http://localhost:5173
+
+# Testes (65)
 python -m pytest tests/ -v
 
 # Instalar dependências
 pip install pymunk pygame pyyaml numpy pytest
+pip install "fastapi>=0.110" "uvicorn[standard]>=0.29"   # server
+pip install pybind11                                      # bridge C++
 ```

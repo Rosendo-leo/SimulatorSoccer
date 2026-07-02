@@ -6,19 +6,25 @@ Desenvolvido por **Leonardo Rosendo**.
 
 ---
 
-## Fase atual: Fase 1 — Motor de física + percepts + visualizador
+## Fase atual: Fases 1–3 completas + Fase 4 parcial
 
-O simulador já é funcional para testar lógica de decisão. As fases seguintes adicionarão frontend 3D (Three.js), WebSocket server, replay e editor de cenários.
+Motor de física, percepts, HAL, 2v2, validação de YAML, bridge C++ (pybind11), Robot Builder web e viewer 3D já funcionam. Falta: empacotamento Tauri, replay player e RL.
 
 ---
 
 ## Pré-requisitos
 
 - Python 3.10+
-- pip
+- Node.js 18+ (só para o frontend web)
 
 ```bash
 pip install pymunk pygame pyyaml numpy pytest
+
+# Servidor web (builder + viewer 3D)
+pip install "fastapi>=0.110" "uvicorn[standard]>=0.29"
+
+# Bridge C++ (opcional — requer MSVC Build Tools no Windows ou g++ no Linux)
+pip install pybind11
 ```
 
 ---
@@ -43,6 +49,25 @@ python -m sim --seed 42
 
 # Estratégia customizada
 python -m sim --strategy examples.defender_strategy
+
+# 2v2 — dois YAMLs por time (slot 0 = atacante, slot 1 = goleiro)
+python -m sim --blue robots/striker_v3.yaml robots/goalkeeper_v2.yaml \
+              --yellow robots/striker_omni.yaml robots/goalkeeper_diff.yaml \
+              --yellow-strategy examples.defender_strategy
+
+# Estratégia C++ compilada (ver bridge/README.md)
+python -m sim --strategy bridge.cpp_attacker
+```
+
+### Interface web (builder + viewer 3D)
+
+```bash
+# Terminal 1 — servidor (WebSocket + API de robôs)
+uvicorn server.main:app --reload --port 8000
+
+# Terminal 2 — frontend React
+cd frontend && npm install && npm run dev
+# → http://localhost:5173  (abas: Builder | Simulation)
 ```
 
 ### Controles da janela pygame
@@ -70,17 +95,36 @@ rcj-soccer-sim/
 │   ├── hal.py                # interface HAL abstrata (ABC)
 │   ├── hal_sim.py            # backend HAL do simulador
 │   ├── hal_hardware.py       # stub para hardware real
-│   ├── config_loader.py      # parser de YAML de configuração de robô
+│   ├── config_loader.py      # parser + validação de YAML (ConfigError)
+│   ├── types.py              # dataclasses (RobotPercepts, NoiseConfig, ...)
+│   ├── constants.py          # collision categories
 │   ├── recorder.py           # gravação de frames para replay (JSON Lines)
 │   └── __main__.py           # entry point `python -m sim`
+│
+├── server/
+│   └── main.py               # FastAPI: WebSocket do sim + CRUD de robôs
+│
+├── frontend/                 # React + Vite
+│   └── src/
+│       ├── App.jsx           # Robot Builder (formulário + preview SVG)
+│       └── components/
+│           ├── RobotPreview.jsx
+│           └── SimViewer.jsx # viewer 3D (Three.js) via WebSocket
+│
+├── bridge/                   # estratégias C++ compiladas (pybind11)
+│   ├── cpp/hal.hpp           # wrapper C++ do HAL
+│   ├── cpp/attacker.cpp      # Decisao::Attacker original em C++
+│   └── setup.py              # build: python setup.py build_ext --inplace
 │
 ├── robots/                   # configurações YAML dos robôs
 │   ├── example.yaml
 │   ├── striker_v3.yaml
-│   └── goalkeeper_v2.yaml
+│   ├── striker_omni.yaml
+│   ├── goalkeeper_v2.yaml
+│   └── goalkeeper_diff.yaml
 │
 ├── viewer/
-│   └── pygame_viewer.py      # visualizador top-down 2D
+│   └── pygame_viewer.py      # visualizador top-down 2D (debug)
 │
 ├── examples/                 # estratégias de exemplo
 │   ├── attacker_strategy.py  # port do Decisao::Attacker (C++)
@@ -88,7 +132,11 @@ rcj-soccer-sim/
 │   └── simple_strategy.py    # alias para attacker_strategy
 │
 └── tests/
-    └── test_percepts.py      # 15 testes unitários dos sensores
+    ├── test_percepts.py      # sensores: pose conhecida → saída esperada
+    ├── test_config_loader.py # parsing dos YAMLs
+    ├── test_validation.py    # validação (ConfigError) + 2v2
+    ├── test_physics.py       # bola, kicker, engine
+    └── test_cpp_bridge.py    # paridade C++ ↔ Python (pulado se não compilado)
 ```
 
 ---
@@ -211,7 +259,7 @@ Quando um robô cruza a **linha branca de borda** (sai da área de jogo):
 python -m pytest tests/ -v
 ```
 
-15 testes unitários verificam os percepts (IR ring, bússola, ultrassom, sensores de linha) com poses conhecidas e saídas esperadas.
+65 testes cobrem percepts, parsing e validação de YAML, física (bola/kicker/engine), 2v2 e a paridade da estratégia C++ com o port Python (mesma seed → trajetória idêntica).
 
 ---
 
@@ -221,7 +269,7 @@ python -m pytest tests/ -v
 |------|--------|-----------|
 | 1 — Física + percepts + pygame | ✅ Completo | Motor PyMunk, todos os sensores, viewer top-down |
 | 2 — HAL layer | ✅ Completo | Interface unificada sim↔hardware, `read_position()` |
-| 3 — Robot builder + C++ bridge | 🔲 Pendente | pybind11, 2v2, parser YAML avançado |
-| 4 — Frontend 3D + Tauri | 🔲 Pendente | React + Three.js + WebSocket + `.exe` |
-| 5 — Replay + editor de cenários | 🔲 Pendente | Timeline, drag-and-drop |
+| 3 — Robot builder + C++ bridge | ✅ Completo | pybind11, 2v2, validação de YAML, builder web |
+| 4 — Frontend 3D + Tauri | ⚠️ Parcial | Viewer 3D + WebSocket ✅ · falta Tauri `.exe` e seleção de robôs na UI |
+| 5 — Replay + editor de cenários | 🔲 Pendente | Timeline, drag-and-drop (recorder já grava) |
 | 6 — RL headless + versão web | 🔲 Pendente | Gymnasium, SB3, deploy VPS |
