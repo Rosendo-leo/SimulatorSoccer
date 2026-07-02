@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import yaml from 'js-yaml'
 import RobotPreview from './components/RobotPreview'
 import SimViewer   from './components/SimViewer'
+import { API_BASE } from './config'
 import './App.css'
 
 // ── Default config ────────────────────────────────────────────────────────────
@@ -106,7 +107,7 @@ export default function App() {
 
   // Fetch robot list from server
   useEffect(() => {
-    fetch('/api/robots')
+    fetch(`${API_BASE}/api/robots`)
       .then(r => r.json())
       .then(setRobotList)
       .catch(() => {})
@@ -119,7 +120,7 @@ export default function App() {
 
   async function loadRobot(name) {
     try {
-      const res  = await fetch(`/api/robots/${name}`)
+      const res  = await fetch(`${API_BASE}/api/robots/${name}`)
       const data = await res.json()
       setConfig(data)
       notify('ok', `Loaded "${name}"`)
@@ -133,14 +134,14 @@ export default function App() {
     if (!name) return notify('err', 'Robot name is empty')
     setLoading(true)
     try {
-      const res = await fetch(`/api/robots/${name}`, {
+      const res = await fetch(`${API_BASE}/api/robots/${name}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(config),
       })
       if (!res.ok) throw new Error()
       notify('ok', `Saved as robots/${name}.yaml`)
-      const list = await fetch('/api/robots').then(r => r.json())
+      const list = await fetch(`${API_BASE}/api/robots`).then(r => r.json())
       setRobotList(list)
     } catch {
       notify('err', 'Server unavailable — use Download instead')

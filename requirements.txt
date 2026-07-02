@@ -1,0 +1,8 @@
+# Runtime do servidor web (Render/Koyeb/VPS) — SEM pygame/torch/RL.
+# Start command: uvicorn server.main:app --host 0.0.0.0 --port $PORT
+# Deps de dev/RL: pip install -e ".[server,rl]" + pygame pytest (ver CLAUDE.md)
+pymunk>=6.6
+pyyaml>=6.0
+numpy>=1.24
+fastapi>=0.110
+uvicorn[standard]>=0.29

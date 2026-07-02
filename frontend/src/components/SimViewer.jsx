@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import * as THREE from 'three'
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
+import { API_BASE, WS_URL } from '../config'
 import './SimViewer.css'
 
 // Field constants (meters) — must match field.py
@@ -45,7 +46,7 @@ export default function SimViewer() {
   const editRef = useRef(false)                         // lido pelos handlers 3D
 
   function refreshScenarios() {
-    fetch('/api/scenarios').then(r => r.json()).then(setScenarios).catch(() => {})
+    fetch(`${API_BASE}/api/scenarios`).then(r => r.json()).then(setScenarios).catch(() => {})
   }
 
   function toggleEdit() {
@@ -59,7 +60,7 @@ export default function SimViewer() {
 
   async function deleteScenario(name) {
     try {
-      await fetch(`/api/scenarios/${name}`, { method: 'DELETE' })
+      await fetch(`${API_BASE}/api/scenarios/${name}`, { method: 'DELETE' })
       refreshScenarios()
     } catch { /* server offline */ }
   }
@@ -99,14 +100,14 @@ export default function SimViewer() {
   async function openReplayPanel() {
     if (recList !== null) { setRecList(null); return }
     try {
-      const list = await fetch('/api/recordings').then(r => r.json())
+      const list = await fetch(`${API_BASE}/api/recordings`).then(r => r.json())
       setRecList(list)
     } catch { setRecList([]) }
   }
 
   async function loadReplay(name) {
     try {
-      const data = await fetch(`/api/recordings/${name}`).then(r => r.json())
+      const data = await fetch(`${API_BASE}/api/recordings/${name}`).then(r => r.json())
       objRef.current.clearRobots?.()
       setEditMode(false)
       editRef.current = false
@@ -127,9 +128,9 @@ export default function SimViewer() {
   }
 
   useEffect(() => {
-    fetch('/api/robots').then(r => r.json()).then(setRobots).catch(() => {})
-    fetch('/api/strategies').then(r => r.json()).then(setStrategies).catch(() => {})
-    fetch('/api/match').then(r => r.json()).then(m => setMatch({
+    fetch(`${API_BASE}/api/robots`).then(r => r.json()).then(setRobots).catch(() => {})
+    fetch(`${API_BASE}/api/strategies`).then(r => r.json()).then(setStrategies).catch(() => {})
+    fetch(`${API_BASE}/api/match`).then(r => r.json()).then(m => setMatch({
       blue:   [m.blue?.[0] ?? '',   m.blue?.[1] ?? ''],
       yellow: [m.yellow?.[0] ?? '', m.yellow?.[1] ?? ''],
       blue_strategy:   m.blue_strategy,
@@ -449,7 +450,7 @@ export default function SimViewer() {
 
     // ── WebSocket ─────────────────────────────────────────────────────
     function connect() {
-      const ws = new WebSocket('ws://localhost:8000/ws/sim')
+      const ws = new WebSocket(WS_URL)
       wsRef.current = ws
       ws.onopen  = () => setWsOk(true)
       ws.onclose = () => { setWsOk(false); setTimeout(connect, 2000) }

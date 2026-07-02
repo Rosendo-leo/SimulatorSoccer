@@ -206,7 +206,18 @@ LINE_HALF_THICKNESS = 0.010 # 10 mm — tolerância de detecção de linha
   módulos de estratégia restritos aos prefixos `examples.`/`bridge.`;
   REST: `GET /api/strategies`, `GET /api/match`
 - ❌ Empacotamento Tauri → `.exe` Windows + `.AppImage` Linux
-- ❌ Deploy web (Vercel + sim no Oracle Cloud VPS)
+- ⚠️ Deploy web (Vercel + backend no Render free / GCP e2-micro) — código pronto:
+  - Frontend: `VITE_SERVER_URL=https://<backend>` na Vercel (REST + WS derivado
+    p/ `wss://` em `frontend/src/config.js`); vazio em dev → proxy Vite + localhost
+  - Backend: `requirements.txt` na raiz (só deps do server, sem pygame/torch,
+    validado em venv limpo); start `uvicorn server.main:app --host 0.0.0.0 --port $PORT`
+  - **Render**: definir Build Command explícito `pip install -r requirements.txt`
+    e env var `PYTHON_VERSION=3.12.11` — sem isso o Render detecta o
+    `pyproject.toml` e instala via poetry (que já tentou compilar pygame e falhou;
+    pygame agora é extra opcional `[viewer]`, mas o build command explícito evita
+    o poetry de vez)
+  - CORS: env var `CORS_ORIGINS=https://<app>.vercel.app` (separar por vírgula)
+  - Falta apenas: criar os serviços e apontar as env vars
 
 ### Fase 5 — Replay + editor de cenários ✅ COMPLETA
 - ✅ Gravação pela UI: botão ⏺ no viewer → WS `record_start`/`record_stop`,
@@ -284,7 +295,8 @@ EOF
 python -m pytest tests/ -v
 
 # Instalar dependências
-pip install pymunk pygame pyyaml numpy pytest
+pip install pymunk pyyaml numpy pytest
+pip install pygame                                        # viewer 2D local (opcional)
 pip install "fastapi>=0.110" "uvicorn[standard]>=0.29"   # server
 pip install pybind11                                      # bridge C++
 pip install gymnasium pettingzoo stable-baselines3        # RL (Fase 6)

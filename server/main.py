@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import importlib
 import json
+import os
 import time
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -146,10 +147,15 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="RCJ Soccer Simulator API", lifespan=lifespan)
 
+# Origens extras (produção) via env var, separadas por vírgula:
+#   CORS_ORIGINS=https://meu-sim.vercel.app,https://meudominio.com
+_cors_origins = [
+    "http://localhost:5173", "http://127.0.0.1:5173", "http://localhost:3000",
+] + [o.strip() for o in os.environ.get("CORS_ORIGINS", "").split(",") if o.strip()]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://127.0.0.1:5173",
-                   "http://localhost:3000"],
+    allow_origins=_cors_origins,
     allow_methods=["*"],
     allow_headers=["*"],
 )

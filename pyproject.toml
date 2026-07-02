@@ -9,12 +9,16 @@ description = "RoboCup Junior Soccer Simulator"
 requires-python = ">=3.10"
 dependencies = [
     "pymunk>=6.6",
-    "pygame>=2.5",
     "pyyaml>=6.0",
     "numpy>=1.24",
 ]
 
 [project.optional-dependencies]
+# pygame só é usado pelo viewer 2D local (import lazy em sim/__main__.py);
+# fora das deps core para nenhum instalador de deploy tentar compilá-lo.
+viewer = [
+    "pygame>=2.5",
+]
 server = [
     "fastapi>=0.110",
     "uvicorn[standard]>=0.29",
@@ -26,6 +30,7 @@ cpp = [
 rl = [
     "gymnasium>=0.29",
     "stable-baselines3>=2.2",
+    "pettingzoo>=1.24",
 ]
 
 [project.scripts]
