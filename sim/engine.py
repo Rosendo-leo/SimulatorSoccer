@@ -11,7 +11,7 @@ from sim.field import (
     build_field, is_blue_goal, is_yellow_goal,
     HALF_L, HALF_W, HALF_TOTAL_L, HALF_TOTAL_W, NEUTRAL_SPOTS,
 )
-from sim.ball import Ball
+from sim.ball import Ball, BALL_RADIUS
 from sim.robot import Robot
 from sim.hal_sim import SimHAL
 from sim.recorder import Recorder
@@ -69,6 +69,14 @@ class SimEngine:
 
         self._recorder: Optional[Recorder] = None
 
+    @property
+    def ball(self) -> Ball:
+        return self._ball
+
+    @property
+    def entries(self) -> list[_RobotEntry]:
+        return self._entries
+
     # ── Robot management ──────────────────────────────────────────────────────
 
     def add_robot(
@@ -97,6 +105,34 @@ class SimEngine:
         entry = _RobotEntry(robot, hal, strategy_fn, robot_id, team)
         self._entries.append(entry)
         return robot, hal
+
+    # ── Direct placement (editor de cenários / RL) ───────────────────────────
+
+    def set_ball_pose(self, x: float, y: float) -> None:
+        """Teleporta a bola (velocidade zerada), limitada à área total."""
+        x = max(-HALF_TOTAL_L + BALL_RADIUS, min(HALF_TOTAL_L - BALL_RADIUS, x))
+        y = max(-HALF_TOTAL_W + BALL_RADIUS, min(HALF_TOTAL_W - BALL_RADIUS, y))
+        self._ball.reset(x, y)
+        if self.state != "playing":
+            self.state = "playing"
+            self._goal_timer = 0
+
+    def set_robot_pose(self, robot_id: str, x: float, y: float,
+                       heading: float | None = None) -> None:
+        """Teleporta um robô (limpa penalidade e zera velocidades)."""
+        for entry in self._entries:
+            if entry.robot_id == robot_id:
+                break
+        else:
+            raise KeyError(f"Robot {robot_id!r} not found")
+        r = entry.robot.config.body.radius
+        x = max(-HALF_L + r, min(HALF_L - r, x))
+        y = max(-HALF_W + r, min(HALF_W - r, y))
+        if heading is None:
+            heading = entry.robot.body.angle
+        entry.robot.reset(x, y, heading)
+        entry.penalized     = False
+        entry.penalty_timer = 0
 
     # ── Recording ─────────────────────────────────────────────────────────────
 
@@ -304,9 +340,13 @@ class SimEngine:
             b   = entry.robot.body
             px, py = b.position
             vx, vy = b.velocity
+            cfg_body = entry.robot.config.body
             robots.append({
                 "id":      entry.robot_id,
                 "team":    entry.team,
+                "name":    entry.robot.config.name,
+                "radius":  round(cfg_body.radius if cfg_body.shape == "circle"
+                                 else math.hypot(cfg_body.width, cfg_body.height) / 2, 4),
                 "x":       round(px, 4),
                 "y":       round(py, 4),
                 "heading": round(b.angle, 4),

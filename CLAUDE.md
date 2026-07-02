@@ -21,7 +21,7 @@ Não é um fork do grSim (feito para SSL com visão global). É um simulador con
 | Bridge C++ | pybind11 → `.pyd`/`.so` (bridge/, compilado e testado) |
 | Comunicação | WebSocket JSON (FastAPI + uvicorn) — `server/main.py` |
 | Shell desktop (futuro) | Tauri 2.0 → `.exe` / `.AppImage` |
-| RL (futuro) | Gymnasium + Stable-Baselines3 + PettingZoo |
+| RL | Gymnasium + Stable-Baselines3 + PettingZoo (`rl/`) |
 
 ---
 
@@ -201,27 +201,53 @@ LINE_HALF_THICKNESS = 0.010 # 10 mm — tolerância de detecção de linha
 ### Fase 4 — Frontend 3D + Tauri ⚠️ PARCIAL
 - ✅ React + Three.js: campo 3D, robôs, bola, HUD, câmera orbital
 - ✅ WebSocket server (FastAPI) publicando frames + comandos pause/resume/reset/speed/restart
-- ❌ Seleção de robôs/estratégias pela UI (comando `restart` já existe no WS)
+- ✅ Seleção de robôs/estratégias pela UI — painel Match Setup (⚙ na barra), suporta 2v2,
+  `restart` aceita `blue`/`yellow` (lista) + `blue_strategy`/`yellow_strategy`;
+  módulos de estratégia restritos aos prefixos `examples.`/`bridge.`;
+  REST: `GET /api/strategies`, `GET /api/match`
 - ❌ Empacotamento Tauri → `.exe` Windows + `.AppImage` Linux
 - ❌ Deploy web (Vercel + sim no Oracle Cloud VPS)
 
-### Fase 5 — Replay + editor de cenários
-- Recorder já implementado (JSON Lines); precisa de player no frontend
-- Timeline com seek, play/pause, velocidade variável
-- Drag-and-drop para posicionar robôs/bola
+### Fase 5 — Replay + editor de cenários ✅ COMPLETA
+- ✅ Gravação pela UI: botão ⏺ no viewer → WS `record_start`/`record_stop`,
+  salva em `recordings/match_<timestamp>.jsonl`
+- ✅ REST: `GET /api/recordings` (lista), `GET/DELETE /api/recordings/{name}`
+  (frames slim, valida path traversal)
+- ✅ Player no frontend: botão 🎞 lista replays, timeline com seek (slider),
+  play/pause, velocidade 0.5–4× — reusa a cena 3D (frames ao vivo são ignorados
+  durante o replay)
+- ✅ Editor de cenários: botão ✋ pausa o sim e habilita drag-and-drop
+  (raycasting Three.js) de bola/robôs; WS `place {object, x, y, heading?}`
+  (engine clampa à área válida via `set_ball_pose`/`set_robot_pose`);
+  cenários salvos como JSON em `scenarios/` — WS `scenario_save`/`scenario_load`,
+  REST `GET/DELETE /api/scenarios`
 
-### Fase 6 — RL headless
-- Wrapper Gymnasium sobre o SimEngine
-- Treino com Stable-Baselines3 (PPO)
-- PettingZoo para self-play 2v2
+### Fase 6 — RL headless ✅ COMPLETA (pacote `rl/`)
+- ✅ `rl/env.py` — `SoccerEnv` (Gymnasium): agente = robô azul, adversário
+  scriptado. `obs_mode="vector"` (14 floats ground-truth normalizados, aprende
+  rápido) ou `"percepts"` (só dados da HAL — sim2real). Ação Box(4,):
+  [vx, vy, omega, kick] em [-1,1]. Reward: ±10 gol, shaping bola→gol e
+  robô→bola, -5 penalidade, truncation em `max_steps`. `frame_skip=4`
+  (decisões a 15 Hz). Seed reprodutível (recria o engine).
+- ✅ `rl/train.py` — PPO (SB3): `python -m rl.train --timesteps 200000`
+  (~545 decisões/s medido). Salva em `models/` e avalia 10 episódios.
+- ✅ `rl/soccer_pz.py` — `SoccerParallelEnv` (PettingZoo) 2v2 self-play;
+  `mirror=True` espelha obs/ações do amarelo (todo agente ataca +X → uma
+  política compartilhada). Passa `parallel_api_test`.
+- Deps: `pip install gymnasium pettingzoo stable-baselines3` (já no .venv)
 
 ### Pendências menores
-- Tick rate real do server ~42/s em vez de 60 (overhead do `asyncio.sleep` no Windows) — compensar com múltiplos steps por iteração
-- Viewer 3D usa raio fixo 0.11 m em vez de ler do config do robô
+- ✅ ~~Tick rate real do server ~42/s~~ — `_sim_loop` agora usa acumulador de tempo
+  (perf_counter) com catch-up de até 8 steps por iteração → 60 ticks/s reais
+- ✅ ~~Viewer 3D usa raio fixo 0.11 m~~ — `get_state()` serializa `radius` e `name`
+  por robô; o viewer escala corpo/anel/seta pelo raio real
 
 ---
 
 ## Comandos úteis
+
+> Nesta máquina o `python` global (pyenv-win) não tem versão configurada.
+> Use o venv do projeto: `.venv\Scripts\python.exe` (Python 3.12, deps instaladas).
 
 ```bash
 # Rodar simulação
@@ -246,11 +272,20 @@ cd bridge && python setup.py build_ext --inplace
 uvicorn server.main:app --reload --port 8000
 cd frontend && npm run dev    # → http://localhost:5173
 
-# Testes (65)
+# RL (Fase 6)
+python -m rl.train --timesteps 200000                     # treina PPO
+python -m rl.train --obs-mode percepts --n-envs 8         # obs realistas
+python - <<'EOF'                                          # PettingZoo 2v2
+from rl.soccer_pz import SoccerParallelEnv
+env = SoccerParallelEnv(); obs, _ = env.reset(seed=0)
+EOF
+
+# Testes (88)
 python -m pytest tests/ -v
 
 # Instalar dependências
 pip install pymunk pygame pyyaml numpy pytest
 pip install "fastapi>=0.110" "uvicorn[standard]>=0.29"   # server
 pip install pybind11                                      # bridge C++
+pip install gymnasium pettingzoo stable-baselines3        # RL (Fase 6)
 ```

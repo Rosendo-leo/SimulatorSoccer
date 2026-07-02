@@ -160,6 +160,236 @@
   color: #3d4466;
 }
 
+.sv-btn.active {
+  background: #3d59a1;
+  border-color: #7aa2f7;
+}
+
+/* ── Match setup panel ───────────────────────────────────────────────── */
+
+.sv-setup {
+  position: absolute;
+  bottom: 54px;
+  left: 16px;
+  width: 380px;
+  background: rgba(13, 17, 23, 0.94);
+  border: 1px solid rgba(255,255,255,0.10);
+  border-radius: 12px;
+  backdrop-filter: blur(12px);
+  padding: 14px 16px;
+}
+
+.sv-setup-title {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: #565f89;
+  text-transform: uppercase;
+  margin-bottom: 10px;
+}
+
+.sv-setup-teams {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.sv-setup-team {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.sv-setup-team-name {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+}
+.sv-setup-team.blue   .sv-setup-team-name { color: #93c5fd; }
+.sv-setup-team.yellow .sv-setup-team-name { color: #fef08a; }
+
+.sv-select {
+  height: 28px;
+  width: 100%;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.10);
+  border-radius: 6px;
+  color: #c0caf5;
+  font-size: 11px;
+  padding: 0 6px;
+  cursor: pointer;
+}
+.sv-select:hover { border-color: #7aa2f7; }
+.sv-select option { background: #1a1b26; }
+
+.sv-setup-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.sv-setup-msg { font-size: 11px; }
+.sv-setup-msg.ok  { color: #9ece6a; }
+.sv-setup-msg.err { color: #f7768e; }
+
+.sv-setup-restart {
+  height: 30px;
+  padding: 0 14px;
+  background: #3d59a1;
+  border: 1px solid #7aa2f7;
+  border-radius: 6px;
+  color: #e2e8f0;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.sv-setup-restart:hover:not(:disabled) { background: #4a69b8; }
+.sv-setup-restart:disabled { opacity: 0.45; cursor: not-allowed; }
+
+/* ── Scenario editor ─────────────────────────────────────────────────── */
+
+.sv-canvas.edit { cursor: grab; }
+.sv-canvas.edit:active { cursor: grabbing; }
+
+.sv-editor { width: 300px; }
+
+.sv-editor-hint {
+  font-size: 11px;
+  color: #565f89;
+  margin-bottom: 10px;
+}
+
+.sv-editor-save {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.sv-text {
+  flex: 1;
+  height: 30px;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.10);
+  border-radius: 6px;
+  color: #c0caf5;
+  font-size: 12px;
+  padding: 0 8px;
+}
+.sv-text:focus { outline: none; border-color: #7aa2f7; }
+
+.sv-editor .sv-setup-msg { display: block; margin-top: 8px; }
+
+/* ── Recording / replay ──────────────────────────────────────────────── */
+
+@keyframes recPulse {
+  0%, 100% { color: #f7768e; }
+  50%      { color: #7a3040; }
+}
+.sv-btn.rec {
+  border-color: #f7768e;
+  animation: recPulse 1.2s ease-in-out infinite;
+}
+
+.sv-replays { width: 320px; }
+
+.sv-replays-empty {
+  font-size: 11px;
+  color: #565f89;
+  padding: 6px 0;
+}
+
+.sv-replays-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 220px;
+  overflow-y: auto;
+}
+
+.sv-replays-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 6px;
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 6px;
+}
+
+.sv-replays-name {
+  flex: 1;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: #c0caf5;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sv-replays-size {
+  font-size: 10px;
+  color: #565f89;
+}
+
+.sv-timeline {
+  position: absolute;
+  bottom: 54px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(640px, calc(100% - 40px));
+  background: rgba(13, 17, 23, 0.94);
+  border: 1px solid rgba(255,255,255,0.10);
+  border-radius: 12px;
+  backdrop-filter: blur(12px);
+  padding: 10px 14px;
+}
+
+.sv-timeline-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.sv-timeline-badge {
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  color: #0d1117;
+  background: #e0af68;
+  border-radius: 4px;
+  padding: 2px 6px;
+}
+
+.sv-timeline-name {
+  flex: 1;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: #c0caf5;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sv-timeline-time {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: #565f89;
+}
+
+.sv-timeline-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.sv-timeline-slider {
+  flex: 1;
+  accent-color: #7aa2f7;
+}
+
 /* ── Offline banner ──────────────────────────────────────────────────── */
 
 .sv-offline {
