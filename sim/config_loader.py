@@ -79,6 +79,21 @@ class KickerConfig:
 
 
 @dataclass
+class VisualConfig:
+    """Malha 3D do viewer (só cosmética — a física continua no shape do body).
+
+    `mesh` é o nome de um arquivo .glb em robots/meshes/ (exportar o CAD em
+    METROS; use `scale` só para ajustes finos). `offset` em metros nos eixos
+    do Three.js (x = comprimento do campo, y = altura, z = -y do sim);
+    `rotation` em graus (x, y, z) para corrigir a orientação do CAD.
+    """
+    mesh: str = ""
+    scale: float = 1.0
+    offset: Tuple[float, float, float] = (0.0, 0.0, 0.0)
+    rotation: Tuple[float, float, float] = (0.0, 0.0, 0.0)
+
+
+@dataclass
 class RobotConfig:
     name: str = "Robot"
     league: str = DEFAULT_LEAGUE          # "infrared" | "vision"
@@ -86,6 +101,7 @@ class RobotConfig:
     wheels: WheelsConfig = field(default_factory=WheelsConfig)
     sensors: SensorsConfig = field(default_factory=SensorsConfig)
     kicker: Optional[KickerConfig] = None
+    visual: Optional[VisualConfig] = None
 
 
 class ConfigError(ValueError):
@@ -180,6 +196,22 @@ def _validate(cfg: RobotConfig) -> None:
         _require(cfg.kicker.cooldown >= 0,
                  f"kicker.cooldown must be >= 0, got {cfg.kicker.cooldown}")
 
+    if cfg.visual:
+        v = cfg.visual
+        _require(bool(v.mesh) and isinstance(v.mesh, str),
+                 f"visual.mesh must be a .glb filename, got {v.mesh!r}")
+        _require(not any(c in v.mesh for c in ("/", "\\")) and ".." not in v.mesh,
+                 f"visual.mesh must be a plain filename inside robots/meshes/ "
+                 f"(no paths), got {v.mesh!r}")
+        _require(v.mesh.lower().endswith(".glb"),
+                 f"visual.mesh must end in .glb, got {v.mesh!r}")
+        _require(v.scale > 0, f"visual.scale must be positive, got {v.scale}")
+        for label, triple in (("offset", v.offset), ("rotation", v.rotation)):
+            _require(len(triple) == 3,
+                     f"visual.{label} must be [x, y, z], got {triple!r}")
+            for val in triple:
+                _num(val, f"visual.{label}[]")
+
 
 def load_robot_config(path: str) -> RobotConfig:
     with open(path) as f:
@@ -245,6 +277,16 @@ def load_robot_config(path: str) -> RobotConfig:
             cooldown=d.get("cooldown", 2.0),
         )
 
+    visual = None
+    if "visual" in r and r["visual"]:
+        d = r["visual"]
+        visual = VisualConfig(
+            mesh=d.get("mesh", ""),
+            scale=d.get("scale", 1.0),
+            offset=tuple(d.get("offset", (0.0, 0.0, 0.0))),
+            rotation=tuple(d.get("rotation", (0.0, 0.0, 0.0))),
+        )
+
     cfg = RobotConfig(
         name=r.get("name", "Robot"),
         league=r.get("league", DEFAULT_LEAGUE),
@@ -252,6 +294,7 @@ def load_robot_config(path: str) -> RobotConfig:
         wheels=wheels,
         sensors=sensors,
         kicker=kicker,
+        visual=visual,
     )
     _validate(cfg)
     return cfg

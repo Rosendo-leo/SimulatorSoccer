@@ -417,7 +417,8 @@ class SimEngine:
             b   = entry.robot.body
             px, py = b.position
             vx, vy = b.velocity
-            cfg_body = entry.robot.config.body
+            cfg_body   = entry.robot.config.body
+            cfg_visual = entry.robot.config.visual
             robots.append({
                 "id":      entry.robot_id,
                 "team":    entry.team,
@@ -430,6 +431,11 @@ class SimEngine:
                 "vx":      round(vx, 4),
                 "vy":      round(vy, 4),
                 "omega":   round(b.angular_velocity, 4),
+                "visual":  ({"mesh":     cfg_visual.mesh,
+                             "scale":    cfg_visual.scale,
+                             "offset":   list(cfg_visual.offset),
+                             "rotation": list(cfg_visual.rotation)}
+                            if cfg_visual else None),
                 "penalized":        entry.penalized,
                 "penalty_remaining": round(entry.penalty_timer * PHYSICS_DT, 1),
                 "percepts": entry.hal._percepts,

@@ -314,6 +314,18 @@ def list_robots() -> list[str]:
     return sorted(p.stem for p in ROBOTS_DIR.glob("*.yaml"))
 
 
+@app.get("/api/meshes/{name}")
+def get_mesh(name: str):
+    """Serve malhas .glb de robots/meshes/ para o viewer 3D."""
+    from fastapi.responses import FileResponse
+    if "/" in name or "\\" in name or ".." in name or not name.endswith(".glb"):
+        raise HTTPException(400, "Invalid mesh name")
+    path = ROBOTS_DIR / "meshes" / name
+    if not path.exists():
+        raise HTTPException(404, f"Mesh '{name}' not found")
+    return FileResponse(path, media_type="model/gltf-binary")
+
+
 @app.get("/api/strategies")
 def get_strategies() -> list[str]:
     return list_strategies()

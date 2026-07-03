@@ -37,3 +37,11 @@ robot:
   kicker:
     force: 5.0
     cooldown: 2.0
+
+  # Malha 3D do viewer (opcional, só cosmética — a física usa body.shape).
+  # Exporte o CAD como .glb EM METROS para robots/meshes/.
+  visual:
+    mesh: demo.glb
+    scale: 1.0
+    offset: [0, 0, 0]      # metros, eixos Three.js (x=campo, y=altura, z)
+    rotation: [0, 0, 0]    # graus — corrige orientação do CAD

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import * as THREE from 'three'
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js'
 import { API_BASE, WS_URL } from '../config'
 import './SimViewer.css'
 
@@ -294,7 +295,24 @@ export default function SimViewer() {
     // ── Robot factory ──────────────────────────────────────────────────
     const robotMeshes = {}
 
-    function makeRobot(id, team, radius = 0.11) {
+    // Cache de malhas GLB: um load por arquivo, clones por instância
+    const gltfLoader = new GLTFLoader()
+    const gltfCache  = {}   // mesh name → Promise<THREE.Group>
+    function loadMesh(name) {
+      if (!gltfCache[name]) {
+        gltfCache[name] = new Promise((resolve, reject) => {
+          gltfLoader.load(
+            `${API_BASE}/api/meshes/${name}`,
+            gltf => resolve(gltf.scene),
+            undefined,
+            reject,
+          )
+        })
+      }
+      return gltfCache[name]
+    }
+
+    function makeRobot(id, team, radius = 0.11, visual = null) {
       const isBlue   = team === 'blue'
       const teamClr  = isBlue ? 0x3b82f6 : 0xeab308
       const group    = new THREE.Group()
@@ -334,6 +352,23 @@ export default function SimViewer() {
       dot.position.y = 0.092
       group.add(dot)
 
+      // Malha real (CAD do time) — substitui o cilindro; mantém seta e dot
+      if (visual?.mesh) {
+        loadMesh(visual.mesh).then(proto => {
+          const mesh = proto.clone(true)
+          mesh.scale.setScalar(visual.scale ?? 1)
+          const [ox, oy, oz] = visual.offset ?? [0, 0, 0]
+          mesh.position.set(ox, oy, oz)
+          const [rx, ry, rz] = visual.rotation ?? [0, 0, 0]
+          mesh.rotation.set(
+            rx * Math.PI / 180, ry * Math.PI / 180, rz * Math.PI / 180)
+          mesh.traverse(o => { if (o.isMesh) o.castShadow = true })
+          group.add(mesh)
+          body.visible = false
+          ring.visible = false
+        }).catch(() => { /* mesh indisponível — fica o cilindro */ })
+      }
+
       scene.add(group)
       robotMeshes[id] = group
       return group
@@ -353,7 +388,7 @@ export default function SimViewer() {
       shadowMesh.position.set(x, 0.002, -y)
       // Robots
       for (const r of state.robots) {
-        const mesh = robotMeshes[r.id] ?? makeRobot(r.id, r.team, r.radius)
+        const mesh = robotMeshes[r.id] ?? makeRobot(r.id, r.team, r.radius, r.visual)
         mesh.visible = !r.penalized
         if (!r.penalized) {
           mesh.position.set(r.x, 0, -r.y)

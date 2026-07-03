@@ -42,3 +42,10 @@ def ensure_data_dirs() -> None:
             dst = ROBOTS_DIR / src.name
             if not dst.exists():
                 shutil.copyfile(src, dst)
+    bundled_meshes = bundled / "meshes"
+    if bundled_meshes.is_dir():
+        (ROBOTS_DIR / "meshes").mkdir(exist_ok=True)
+        for src in bundled_meshes.glob("*.glb"):
+            dst = ROBOTS_DIR / "meshes" / src.name
+            if not dst.exists():
+                shutil.copyfile(src, dst)

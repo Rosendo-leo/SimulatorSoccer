@@ -27,6 +27,8 @@ for pkg in ("pymunk", "uvicorn"):
 datas += [(str(p), "examples") for p in (ROOT / "examples").glob("*_strategy.py")]
 # robots de exemplo — seedam a pasta de dados do usuário na primeira execução
 datas += [(str(p), "robots") for p in (ROOT / "robots").glob("*.yaml")]
+datas += [(str(p), "robots/meshes")
+          for p in (ROOT / "robots" / "meshes").glob("*.glb")]
 
 a = Analysis(
     [str(ROOT / "server" / "desktop.py")],

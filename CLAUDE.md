@@ -235,6 +235,16 @@ LINE_HALF_THICKNESS = 0.010 # 10 mm — tolerância de detecção de linha
   robô encostado no próprio gol, um chute, reprova se a bola voltar ao
   próprio gol após rebater no adversário. Exit code 0/1.
 
+### Malhas 3D no viewer ✅
+- Bloco opcional `visual:` no YAML (`mesh` = arquivo `.glb` em `robots/meshes/`,
+  `scale`, `offset` em m nos eixos Three.js, `rotation` em graus). Só cosmético —
+  a física continua usando `body.shape`. Exportar CAD **em metros**.
+- `GET /api/meshes/{name}` serve os `.glb`; `get_state()` inclui `visual` por
+  robô; SimViewer usa `GLTFLoader` com cache (1 load por arquivo, clone por
+  instância), esconde o cilindro e mantém seta de heading + dot do time;
+  fallback ao cilindro se a malha falhar. Exemplo: `robots/meshes/demo.glb`
+  (usado pelo `example.yaml`). No exe desktop, meshes são seedados no %APPDATA%.
+
 ### Fase 5 — Replay + editor de cenários ✅ COMPLETA
 - ✅ Gravação pela UI: botão ⏺ no viewer → WS `record_start`/`record_stop`,
   salva em `recordings/match_<timestamp>.jsonl`
