@@ -15,6 +15,7 @@ from sim.ball import Ball, BALL_RADIUS
 from sim.robot import Robot
 from sim.hal_sim import SimHAL
 from sim.recorder import Recorder
+from sim.referee import Referee, RobotSnapshot
 
 PHYSICS_DT           = 1 / 60    # fixed timestep (s)
 PHYSICS_SUBSTEPS     = 4         # sub-steps per frame (prevents ball tunneling)
@@ -48,7 +49,7 @@ class _RobotEntry:
 
 
 class SimEngine:
-    def __init__(self, seed: int | None = None) -> None:
+    def __init__(self, seed: int | None = None, referee: bool = True) -> None:
         self._rng = np.random.default_rng(seed)
 
         self._space = pymunk.Space()
@@ -68,6 +69,11 @@ class SimEngine:
         self.paused = False
 
         self._recorder: Optional[Recorder] = None
+
+        # Árbitro automático (Rules 2026 §2.5–2.9)
+        self._referee: Optional[Referee] = Referee() if referee else None
+        self.last_violation: Optional[dict] = None
+        self.violation_counts: dict[str, int] = {}
 
     @property
     def ball(self) -> Ball:
@@ -113,6 +119,8 @@ class SimEngine:
         x = max(-HALF_TOTAL_L + BALL_RADIUS, min(HALF_TOTAL_L - BALL_RADIUS, x))
         y = max(-HALF_TOTAL_W + BALL_RADIUS, min(HALF_TOTAL_W - BALL_RADIUS, y))
         self._ball.reset(x, y)
+        if self._referee is not None:
+            self._referee.reset()
         if self.state != "playing":
             self.state = "playing"
             self._goal_timer = 0
@@ -213,6 +221,10 @@ class SimEngine:
                 if abs(px) > HALF_L + _OOB_MARGIN or abs(py) > HALF_W + _OOB_MARGIN:
                     self._penalize(entry)
 
+        # 6b. Árbitro: pushing / multiple defense / lack of progress / holding
+        if self.state == "playing" and self._referee is not None:
+            self._run_referee()
+
         # 7. Penalty countdown
         for entry in self._entries:
             if entry.penalized and entry.penalty_timer > 0:
@@ -270,6 +282,61 @@ class SimEngine:
                         b2.velocity = (v2x + nx * approach2,
                                        v2y + ny * approach2)
 
+    # ── Referee (Rules 2026) ─────────────────────────────────────────────────
+
+    def _run_referee(self) -> None:
+        snapshots = []
+        for e in self._entries:
+            if e.penalized:
+                continue
+            b = e.robot.body
+            snapshots.append(RobotSnapshot(
+                robot_id=e.robot_id, team=e.team,
+                x=b.position.x, y=b.position.y,
+                radius=e.robot.config.body.radius,
+                vx=b.velocity.x, vy=b.velocity.y,
+            ))
+        bx, by   = self._ball.body.position
+        bvx, bvy = self._ball.body.velocity
+
+        for v in self._referee.step(snapshots, (bx, by), (bvx, bvy),
+                                    BALL_RADIUS):
+            self.last_violation = {"kind": v.kind, "robot_id": v.robot_id,
+                                   "detail": v.detail, "tick": self.tick}
+            self.violation_counts[v.kind] = \
+                self.violation_counts.get(v.kind, 0) + 1
+
+            if v.kind == "pushing":
+                # Bola vai ao ponto neutro livre mais distante; sem gol
+                sx, sy = self._neutral_spot(farthest=True)
+                self._ball.reset(sx, sy)
+                self._referee.reset()
+            elif v.kind == "multiple_defense":
+                entry = self._entry_by_id(v.robot_id)
+                if entry is not None:
+                    sx, sy = self._neutral_spot(farthest=True, exclude=entry)
+                    heading = math.pi if entry.team == "blue" else 0.0
+                    entry.robot.reset(sx, sy, heading)
+            elif v.kind in ("lack_of_progress", "holding"):
+                sx, sy = self._neutral_spot(farthest=False)
+                self._ball.reset(sx, sy)
+                self._referee.reset()
+
+    def _entry_by_id(self, robot_id: str) -> Optional[_RobotEntry]:
+        for e in self._entries:
+            if e.robot_id == robot_id:
+                return e
+        return None
+
+    def mark_damaged(self, robot_id: str) -> None:
+        """Rule 2.9 — robô danificado (decisão do 'árbitro' humano): penalidade
+        padrão de 1 min fora do campo, mesma mecânica do out-of-bounds."""
+        entry = self._entry_by_id(robot_id)
+        if entry is None:
+            raise KeyError(f"Robot {robot_id!r} not found")
+        if not entry.penalized:
+            self._penalize(entry)
+
     # ── Penalty system ────────────────────────────────────────────────────────
 
     def _penalize(self, entry: _RobotEntry) -> None:
@@ -290,6 +357,11 @@ class SimEngine:
 
     def _best_neutral_spot(self, exclude: _RobotEntry) -> tuple[float, float]:
         """Neutral spot farthest from the ball, not occupied by an active robot."""
+        return self._neutral_spot(farthest=True, exclude=exclude)
+
+    def _neutral_spot(self, farthest: bool,
+                      exclude: _RobotEntry | None = None) -> tuple[float, float]:
+        """Ponto neutro livre mais distante (ou mais próximo) da bola."""
         ball_pos = self._ball.body.position
         occupied = [
             e.robot.body.position
@@ -298,7 +370,7 @@ class SimEngine:
         ]
 
         best      = NEUTRAL_SPOTS[0]
-        best_dist = -1.0
+        best_dist = -1.0 if farthest else float("inf")
 
         for sx, sy in NEUTRAL_SPOTS:
             dist = math.sqrt((sx - ball_pos.x) ** 2 + (sy - ball_pos.y) ** 2)
@@ -306,7 +378,10 @@ class SimEngine:
                 math.sqrt((sx - p.x) ** 2 + (sy - p.y) ** 2) < 0.25
                 for p in occupied
             )
-            if not taken and dist > best_dist:
+            if taken:
+                continue
+            if (farthest and dist > best_dist) or \
+               (not farthest and dist < best_dist):
                 best_dist = dist
                 best      = (sx, sy)
 
@@ -328,6 +403,8 @@ class SimEngine:
                 x, y, h = _YELLOW_STARTS[yellow_n % len(_YELLOW_STARTS)]
                 yellow_n += 1
             entry.robot.reset(x, y, h)
+        if self._referee is not None:
+            self._referee.reset()
         self.state = "playing"
 
     # ── State serialization ───────────────────────────────────────────────────
@@ -371,6 +448,10 @@ class SimEngine:
             "robots": robots,
             "score":  dict(self.score),
             "state":  self.state,
+            "referee": {
+                "last_violation": self.last_violation,
+                "counts": dict(self.violation_counts),
+            },
         }
 
     def run_headless(self, steps: int, *, real_time: bool = False) -> None:

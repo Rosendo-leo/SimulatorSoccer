@@ -4,10 +4,21 @@ from dataclasses import dataclass, field
 from typing import List, Optional, Tuple
 import yaml
 
-# RCJ Soccer rule limits
-MAX_ROBOT_DIAMETER = 0.22   # 22 cm
+# RCJ Soccer 2026 — limites por sub-liga.
+# Soccer Infrared: cilindro de 22 cm, até 1500 g, bola IR.
+# Soccer Vision:   cilindro de 18 cm, sem limite de peso, bola passiva (câmera).
+# Nota: enquanto a câmera simulada não existe (backlog B1), o ir_ring funciona
+# como detector abstrato de bola também na liga Vision.
+LEAGUE_LIMITS = {
+    "infrared": {"max_diameter": 0.22, "max_mass": 1.5},
+    "vision":   {"max_diameter": 0.18, "max_mass": None},   # sem limite de peso
+}
+DEFAULT_LEAGUE = "infrared"
+
+# Aliases legados (limites da liga Infrared) — mantidos por compatibilidade
+MAX_ROBOT_DIAMETER = LEAGUE_LIMITS["infrared"]["max_diameter"]
 MAX_ROBOT_RADIUS   = MAX_ROBOT_DIAMETER / 2
-MAX_ROBOT_MASS     = 2.5    # kg (Open League limit ~2.4 kg + margin)
+MAX_ROBOT_MASS     = LEAGUE_LIMITS["infrared"]["max_mass"]
 
 
 @dataclass
@@ -70,6 +81,7 @@ class KickerConfig:
 @dataclass
 class RobotConfig:
     name: str = "Robot"
+    league: str = DEFAULT_LEAGUE          # "infrared" | "vision"
     body: BodyConfig = field(default_factory=BodyConfig)
     wheels: WheelsConfig = field(default_factory=WheelsConfig)
     sensors: SensorsConfig = field(default_factory=SensorsConfig)
@@ -92,22 +104,36 @@ def _num(value, name: str) -> float:
 
 
 def _validate(cfg: RobotConfig) -> None:
+    _require(cfg.league in LEAGUE_LIMITS,
+             f"league must be one of {sorted(LEAGUE_LIMITS)}, got {cfg.league!r}")
+    limits       = LEAGUE_LIMITS[cfg.league]
+    max_diameter = limits["max_diameter"]
+    max_radius   = max_diameter / 2
+    max_mass     = limits["max_mass"]
+
     b = cfg.body
     _require(b.shape in ("circle", "rectangle"),
              f"body.shape must be 'circle' or 'rectangle', got {b.shape!r}")
     if b.shape == "circle":
-        _require(0 < b.radius <= MAX_ROBOT_RADIUS,
-                 f"body.radius must be in (0, {MAX_ROBOT_RADIUS}] m "
-                 f"(RCJ 22 cm diameter limit), got {b.radius}")
+        _require(0 < b.radius <= max_radius,
+                 f"body.radius must be in (0, {max_radius}] m "
+                 f"(RCJ {cfg.league} league: {max_diameter * 100:.0f} cm "
+                 f"diameter limit), got {b.radius}")
         reach = b.radius
     else:
-        _require(0 < b.width <= MAX_ROBOT_DIAMETER,
-                 f"body.width must be in (0, {MAX_ROBOT_DIAMETER}] m, got {b.width}")
-        _require(0 < b.height <= MAX_ROBOT_DIAMETER,
-                 f"body.height must be in (0, {MAX_ROBOT_DIAMETER}] m, got {b.height}")
+        _require(0 < b.width <= max_diameter,
+                 f"body.width must be in (0, {max_diameter}] m "
+                 f"({cfg.league} league), got {b.width}")
+        _require(0 < b.height <= max_diameter,
+                 f"body.height must be in (0, {max_diameter}] m "
+                 f"({cfg.league} league), got {b.height}")
         reach = math.hypot(b.width / 2, b.height / 2)
-    _require(0 < b.mass <= MAX_ROBOT_MASS,
-             f"body.mass must be in (0, {MAX_ROBOT_MASS}] kg, got {b.mass}")
+    if max_mass is not None:
+        _require(0 < b.mass <= max_mass,
+                 f"body.mass must be in (0, {max_mass}] kg "
+                 f"(RCJ {cfg.league} league limit), got {b.mass}")
+    else:
+        _require(b.mass > 0, f"body.mass must be positive, got {b.mass}")
     _require(b.max_speed > 0,
              f"body.max_speed must be positive, got {b.max_speed}")
 
@@ -221,6 +247,7 @@ def load_robot_config(path: str) -> RobotConfig:
 
     cfg = RobotConfig(
         name=r.get("name", "Robot"),
+        league=r.get("league", DEFAULT_LEAGUE),
         body=body,
         wheels=wheels,
         sensors=sensors,

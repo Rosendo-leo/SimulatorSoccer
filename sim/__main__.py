@@ -43,7 +43,22 @@ def main() -> None:
         "--seed", type=int, default=None,
         help="RNG seed for reproducible noise",
     )
+    parser.add_argument(
+        "--kicker-test", action="store_true",
+        help="Run the official kicker strength test (Rules 2026 Annex A) "
+             "on the first --blue robot and exit",
+    )
+    parser.add_argument(
+        "--no-referee", action="store_true",
+        help="Disable the automatic referee (Rules 2026 2.5-2.9)",
+    )
     args = parser.parse_args()
+
+    if args.kicker_test:
+        from sim.kicker_test import run_kicker_test
+        result = run_kicker_test(args.blue[0], seed=args.seed or 0)
+        print(result.report())
+        sys.exit(0 if result.passed else 1)
 
     # Resolve strategies
     def load_strategy(module_name: str):
@@ -58,7 +73,7 @@ def main() -> None:
 
     from sim.engine import SimEngine
 
-    engine = SimEngine(seed=args.seed)
+    engine = SimEngine(seed=args.seed, referee=not args.no_referee)
     for yaml_path in args.blue:
         engine.add_robot(yaml_path, team="blue", strategy_fn=blue_strategy)
     for yaml_path in (args.yellow or []):

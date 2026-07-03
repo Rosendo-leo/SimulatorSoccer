@@ -220,6 +220,21 @@ LINE_HALF_THICKNESS = 0.010 # 10 mm — tolerância de detecção de linha
   - CORS: env var `CORS_ORIGINS=https://<app>.vercel.app` (separar por vírgula)
   - Falta apenas: criar os serviços e apontar as env vars
 
+### Fase 4.5 — Regras 2026 ✅ COMPLETA
+- ✅ Perfis de sub-liga (`league: infrared|vision` no YAML): Infrared 22 cm/1,5 kg,
+  Vision 18 cm/sem limite de peso — validação por liga no `config_loader`
+  (`LEAGUE_LIMITS`). Enquanto não há câmera simulada (backlog B1), o `ir_ring`
+  vale como detector abstrato de bola também na liga Vision.
+- ✅ Árbitro automático (`sim/referee.py`, Rules 2026 §2.5–2.9): pushing,
+  multiple defense, lack of progress (10 s) e holding (3 s) como funções puras
+  testáveis; efeitos aplicados pelo engine (bola/robô → pontos neutros).
+  Ligado por padrão (`SimEngine(referee=False)` ou `--no-referee` desliga);
+  `engine.mark_damaged(id)` = Rule 2.9 (decisão humana). Estado serializado em
+  `state["referee"]` (last_violation + counts).
+- ✅ Teste de força do kicker (`--kicker-test`, Rules §6.2.C.2/Anexo A):
+  robô encostado no próprio gol, um chute, reprova se a bola voltar ao
+  próprio gol após rebater no adversário. Exit code 0/1.
+
 ### Fase 5 — Replay + editor de cenários ✅ COMPLETA
 - ✅ Gravação pela UI: botão ⏺ no viewer → WS `record_start`/`record_stop`,
   salva em `recordings/match_<timestamp>.jsonl`
@@ -311,6 +326,10 @@ python -m sim --headless --steps 3600 --seed 42
 python -m sim --blue robots/striker_v3.yaml robots/goalkeeper_v2.yaml \
               --yellow robots/striker_omni.yaml robots/goalkeeper_diff.yaml \
               --yellow-strategy examples.defender_strategy
+
+# Regras 2026
+python -m sim --kicker-test --blue robots/striker_v3.yaml   # Anexo A (exit 0/1)
+python -m sim --no-referee                                   # desliga o árbitro
 
 # Estratégias
 python -m sim --strategy examples.attacker_strategy
