@@ -36,6 +36,8 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--opponent",  default="examples.defender_strategy",
                    help="módulo da estratégia adversária")
     p.add_argument("--frame-skip", type=int, default=4)
+    p.add_argument("--domain-rand", action="store_true",
+                   help="randomiza massa/ruído por episódio (sim2real)")
     p.add_argument("--save", default="models/ppo_striker",
                    help="caminho do modelo (sem .zip)")
     return p.parse_args()
@@ -49,6 +51,7 @@ def main() -> None:
             obs_mode=args.obs_mode,
             opponent_strategy=args.opponent,
             frame_skip=args.frame_skip,
+            domain_rand=args.domain_rand,
         ))
 
     vec = make_vec_env(make_env, n_envs=args.n_envs, seed=args.seed)

@@ -44,6 +44,8 @@ class RobotSnapshot:
     radius: float
     vx: float = 0.0
     vy: float = 0.0
+    # Dribbler regulamentar ativo → isento da regra de holding (2.5.2)
+    dribbler_active: bool = False
 
 
 @dataclass(frozen=True)
@@ -153,6 +155,8 @@ class Referee:
                         ball_radius: float) -> Optional[Violation]:
         holder = None
         for r in robots:
+            if r.dribbler_active:        # exceção do backspin (Rule 2.5.2)
+                continue
             gap = (math.hypot(r.x - ball[0], r.y - ball[1])
                    - r.radius - ball_radius)
             rel_speed = math.hypot(ball_vel[0] - r.vx, ball_vel[1] - r.vy)

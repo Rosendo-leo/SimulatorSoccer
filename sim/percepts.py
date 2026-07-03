@@ -13,6 +13,8 @@ from sim.config_loader import (
     CompassConfig,
     UltrasoundConfig,
     LineSensorsConfig,
+    BallVelocityConfig,
+    OpponentLidarConfig,
 )
 from sim.field import (
     FIELD_LINE_SEGMENTS,
@@ -162,6 +164,60 @@ def compute_line_sensors(
     return results
 
 
+# ── Ball velocity (B5 — estilo Leopard, sensor óptico de movimento) ──────────
+
+def compute_ball_velocity(
+    ball_vel: pymunk.Vec2d,
+    cfg: BallVelocityConfig,
+    rng: np.random.Generator,
+) -> tuple[float, float]:
+    """Velocidade absoluta da bola (vx, vy) em m/s no frame do mundo."""
+    vx, vy = float(ball_vel.x), float(ball_vel.y)
+    if cfg.noise_std > 0:
+        vx += float(rng.normal(0, cfg.noise_std))
+        vy += float(rng.normal(0, cfg.noise_std))
+    return (vx, vy)
+
+
+# ── Opponent lidar (B2 — estilo Leopard, feixe de ToF) ───────────────────────
+
+_LIDAR_QUERY_FILTER = pymunk.ShapeFilter(mask=CATEGORY_ROBOT)
+
+
+def compute_opponent_lidar(
+    robot_pos: pymunk.Vec2d,
+    heading: float,
+    robot_radius: float,
+    cfg: OpponentLidarConfig,
+    space: pymunk.Space,
+    rng: np.random.Generator,
+) -> list[float]:
+    """Distância ao robô mais próximo em cada direção (m); range se nada.
+
+    Só detecta robôs (qualquer time — como um ToF real). Paredes e bola
+    são invisíveis para este sensor.
+    """
+    readings = []
+    for dir_deg in cfg.directions:
+        dir_rad = heading + math.radians(dir_deg)
+        cos_d   = math.cos(dir_rad)
+        sin_d   = math.sin(dir_rad)
+
+        offset = robot_radius + 0.015
+        start  = pymunk.Vec2d(robot_pos.x + cos_d * offset,
+                              robot_pos.y + sin_d * offset)
+        end    = pymunk.Vec2d(robot_pos.x + cos_d * (offset + cfg.range),
+                              robot_pos.y + sin_d * (offset + cfg.range))
+
+        hit  = space.segment_query_first(start, end, 0.005, _LIDAR_QUERY_FILTER)
+        dist = (hit.alpha * cfg.range) if hit is not None else cfg.range
+
+        if cfg.noise_std > 0:
+            dist += float(rng.normal(0, cfg.noise_std))
+        readings.append(max(0.0, min(cfg.range, dist)))
+    return readings
+
+
 # ── Top-level combinator ──────────────────────────────────────────────────────
 
 def compute_all_percepts(
@@ -188,6 +244,15 @@ def compute_all_percepts(
     if config.sensors.line_sensors:
         percepts["line_sensors"] = compute_line_sensors(
             pos, heading, config.sensors.line_sensors
+        )
+    if config.sensors.ball_velocity:
+        percepts["ball_velocity"] = compute_ball_velocity(
+            ball_body.velocity, config.sensors.ball_velocity, rng
+        )
+    if config.sensors.opponent_lidar:
+        percepts["opponent_lidar"] = compute_opponent_lidar(
+            pos, heading, config.body.radius,
+            config.sensors.opponent_lidar, space, rng
         )
 
     return percepts

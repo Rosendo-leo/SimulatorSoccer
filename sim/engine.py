@@ -119,6 +119,9 @@ class SimEngine:
         x = max(-HALF_TOTAL_L + BALL_RADIUS, min(HALF_TOTAL_L - BALL_RADIUS, x))
         y = max(-HALF_TOTAL_W + BALL_RADIUS, min(HALF_TOTAL_W - BALL_RADIUS, y))
         self._ball.reset(x, y)
+        # Reindexa o cache espacial: queries (lidar/ultrassom) no mesmo tick
+        # enxergariam a shape na posição antiga até o próximo space.step()
+        self._space.reindex_shapes_for_body(self._ball.body)
         if self._referee is not None:
             self._referee.reset()
         if self.state != "playing":
@@ -139,6 +142,7 @@ class SimEngine:
         if heading is None:
             heading = entry.robot.body.angle
         entry.robot.reset(x, y, heading)
+        self._space.reindex_shapes_for_body(entry.robot.body)
         entry.penalized     = False
         entry.penalty_timer = 0
 
@@ -295,6 +299,7 @@ class SimEngine:
                 x=b.position.x, y=b.position.y,
                 radius=e.robot.config.body.radius,
                 vx=b.velocity.x, vy=b.velocity.y,
+                dribbler_active=e.hal._dribbler_on,
             ))
         bx, by   = self._ball.body.position
         bvx, bvy = self._ball.body.velocity
@@ -444,6 +449,7 @@ class SimEngine:
                     "vy":   entry.hal._cmd_vy,
                     "omega": entry.hal._cmd_omega,
                     "kick": entry.hal._kick_requested,
+                    "dribbler": entry.hal._dribbler_on,
                 },
             })
         return {

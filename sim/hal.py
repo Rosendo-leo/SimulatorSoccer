@@ -40,6 +40,30 @@ class HAL(ABC):
         """
 
     # ------------------------------------------------------------------
+    # Optional sensors — not abstract: only robots whose YAML declares
+    # them get real readings; backends without them raise.
+    # ------------------------------------------------------------------
+
+    def read_ball_velocity(self) -> tuple[float, float]:
+        """Return absolute ball velocity (vx, vy) in m/s, world frame.
+
+        Requires `sensors.ball_velocity` in the robot YAML (models an
+        optical motion sensor / camera-based estimate). Essential for
+        intercepting a moving ball instead of chasing its position.
+        """
+        raise NotImplementedError("sensors.ball_velocity not configured")
+
+    def read_opponent_lidar(self) -> List[float]:
+        """Return distance (m) to the nearest ROBOT along each configured
+        direction; sensor range when nothing is hit.
+
+        Requires `sensors.opponent_lidar` in the robot YAML. Detects any
+        robot (teammates included) and ignores walls and the ball —
+        like a real ToF array would.
+        """
+        raise NotImplementedError("sensors.opponent_lidar not configured")
+
+    # ------------------------------------------------------------------
     # Actuators
     # ------------------------------------------------------------------
 
@@ -54,8 +78,23 @@ class HAL(ABC):
         """
 
     @abstractmethod
-    def kick(self) -> None:
-        """Trigger the kicker (subject to cooldown)."""
+    def kick(self, angle_deg: float = 0.0) -> None:
+        """Trigger the kicker (subject to cooldown).
+
+        angle_deg — kick direction relative to the robot heading, in degrees
+        (0 = straight ahead, + = left/CCW). Clamped to the sector allowed by
+        `kicker.aim_range` in the YAML; with the default aim_range of 0 the
+        kick is always straight ahead.
+        """
+
+    def set_dribbler(self, on: bool) -> None:
+        """Turn the dribbler on/off.
+
+        Requires a `dribbler` block in the robot YAML. While active, the
+        ball is held against the dribbler mouth (backspin grip) and the
+        robot is exempt from the holding rule (2.5.2).
+        """
+        raise NotImplementedError("dribbler not configured")
 
     # ------------------------------------------------------------------
     # Optional convenience: stop all motors

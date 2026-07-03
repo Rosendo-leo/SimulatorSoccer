@@ -29,7 +29,9 @@ class SimHAL(HAL):
         self._cmd_vy: float = 0.0
         self._cmd_omega: float = 0.0
         self._kick_requested: bool = False
+        self._kick_angle_deg: float = 0.0
         self._kicker_cooldown: float = 0.0
+        self._dribbler_on: bool = False
 
         # Cache percepts computed at start of each tick
         self._percepts: dict = {}
@@ -67,6 +69,16 @@ class SimHAL(HAL):
         pos = self._robot.body.position
         return (float(pos.x), float(pos.y))
 
+    def read_ball_velocity(self) -> tuple[float, float]:
+        if "ball_velocity" not in self._percepts:
+            raise NotImplementedError("sensors.ball_velocity not configured")
+        return tuple(self._percepts["ball_velocity"])
+
+    def read_opponent_lidar(self) -> list[float]:
+        if "opponent_lidar" not in self._percepts:
+            raise NotImplementedError("sensors.opponent_lidar not configured")
+        return list(self._percepts["opponent_lidar"])
+
     # ------------------------------------------------------------------
     # HAL actuator interface
     # ------------------------------------------------------------------
@@ -76,9 +88,15 @@ class SimHAL(HAL):
         self._cmd_vy = float(vy)
         self._cmd_omega = float(omega)
 
-    def kick(self) -> None:
+    def kick(self, angle_deg: float = 0.0) -> None:
         if self._kicker_cooldown <= 0.0:
             self._kick_requested = True
+            self._kick_angle_deg = float(angle_deg)
+
+    def set_dribbler(self, on: bool) -> None:
+        if not self._config.dribbler:
+            raise NotImplementedError("dribbler not configured")
+        self._dribbler_on = bool(on)
 
     # ------------------------------------------------------------------
     # Engine calls these
@@ -105,6 +123,10 @@ class SimHAL(HAL):
         self._robot.body.velocity = (world_vx, world_vy)
         self._robot.body.angular_velocity = self._cmd_omega
 
+        # Dribbler: força de captura contínua enquanto ativo
+        if self._dribbler_on and self._config.dribbler:
+            self._apply_dribbler(dt)
+
         # Kicker cooldown
         if self._kicker_cooldown > 0.0:
             self._kicker_cooldown -= dt
@@ -114,6 +136,39 @@ class SimHAL(HAL):
             self._kick_requested = False
             if self._config.kicker:
                 self._kicker_cooldown = self._config.kicker.cooldown
+
+    def _apply_dribbler(self, dt: float) -> None:
+        """Modelo 2D do backspin: mola puxando a bola para a boca do
+        dribbler + amortecimento da velocidade relativa bola-robô."""
+        d     = self._config.dribbler
+        body  = self._robot.body
+        angle = body.angle + (0.0 if d.position == "front" else math.pi)
+
+        mouth_dist = self._config.body.radius + BALL_RADIUS_APPROX + 0.004
+        mx = body.position.x + math.cos(angle) * mouth_dist
+        my = body.position.y + math.sin(angle) * mouth_dist
+
+        ball  = self._ball.body
+        ex    = ball.position.x - mx
+        ey    = ball.position.y - my
+        if math.hypot(ex, ey) > d.capture_radius:
+            return                                    # fora da zona de captura
+
+        # Aceleração desejada da bola: mola (K, 1/s²) + amortecimento da
+        # velocidade relativa (C, 1/s), com teto — segura sem lançar.
+        K = 120.0 * d.strength
+        C = 15.0 * d.strength
+        MAX_ACC = 25.0 * d.strength      # m/s²
+        rvx = ball.velocity.x - body.velocity.x
+        rvy = ball.velocity.y - body.velocity.y
+        ax  = -K * ex - C * rvx
+        ay  = -K * ey - C * rvy
+        acc = math.hypot(ax, ay)
+        if acc > MAX_ACC:
+            ax, ay = ax * MAX_ACC / acc, ay * MAX_ACC / acc
+        m_ball = ball.mass
+        ball.apply_impulse_at_world_point(
+            (m_ball * ax * dt, m_ball * ay * dt), ball.position)
 
     def _try_kick(self) -> None:
         if not self._config.kicker:
@@ -126,7 +181,18 @@ class SimHAL(HAL):
 
         kick_reach = self._config.body.radius + BALL_RADIUS_APPROX + 0.02
         if dist < kick_reach and dist > 1e-4:
-            nx, ny = dx / dist, dy / dist
+            # Direção do chute (B4): comandada por kick(angle_deg), limitada
+            # ao setor aim_range do YAML (0 = sempre reto à frente)
+            half_range = self._config.kicker.aim_range / 2.0
+            angle_cmd  = max(-half_range,
+                             min(half_range, self._kick_angle_deg))
+            kick_dir   = self._robot.body.angle + math.radians(angle_cmd)
+            nx, ny = math.cos(kick_dir), math.sin(kick_dir)
+            # A bola precisa estar aproximadamente na boca do kicker
+            ball_dir = math.atan2(dy, dx)
+            diff = (ball_dir - kick_dir + math.pi) % (2 * math.pi) - math.pi
+            if abs(diff) > math.radians(60):
+                return
             self._ball.body.apply_impulse_at_world_point(
                 (self._config.kicker.force * nx,
                  self._config.kicker.force * ny),

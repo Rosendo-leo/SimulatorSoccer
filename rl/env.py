@@ -39,6 +39,8 @@ W_ROBOT_TO_BALL = 1.0    # robô se aproximando da bola
 STEP_PENALTY    = 0.002  # incentivo a resolver rápido
 GOAL_REWARD     = 10.0
 PENALTY_REWARD  = -5.0   # robô penalizado (saiu do campo)
+VIOLATION_REWARD = -2.0  # violação do árbitro atribuída ao agente
+                         # (holding / multiple_defense / pushing — Rules 2026)
 
 
 def _load_strategy(module_name: str):
@@ -57,6 +59,7 @@ class SoccerEnv(gym.Env):
         frame_skip: int = 4,
         max_steps: int = 1800,        # 1800 decisões × 4 frames = 2 min de jogo
         randomize: bool = True,
+        domain_rand: bool = False,    # randomiza massa/ruído por episódio
         seed: int | None = None,
     ) -> None:
         if obs_mode not in ("vector", "percepts"):
@@ -64,10 +67,11 @@ class SoccerEnv(gym.Env):
         self._agent_config    = str(_ROOT / agent_config)
         self._opponent_config = str(_ROOT / opponent_config) if opponent_config else None
         self._opponent_fn     = _load_strategy(opponent_strategy)
-        self.obs_mode   = obs_mode
-        self.frame_skip = frame_skip
-        self.max_steps  = max_steps
-        self.randomize  = randomize
+        self.obs_mode    = obs_mode
+        self.frame_skip  = frame_skip
+        self.max_steps   = max_steps
+        self.randomize   = randomize
+        self.domain_rand = domain_rand
 
         self._build(seed)
 
@@ -89,6 +93,25 @@ class SoccerEnv(gym.Env):
         self._steps = 0
         self._hal._refresh_percepts()
 
+        # Baselines para domain randomization (restaurados a cada episódio)
+        cfg = self._agent.robot.config
+        self._base_mass  = cfg.body.mass
+        self._base_noise = {
+            name: getattr(cfg.sensors, name).noise_std
+            for name in ("ir_ring", "compass", "ultrasound",
+                         "ball_velocity", "opponent_lidar")
+            if getattr(cfg.sensors, name, None) is not None
+        }
+
+    def _apply_domain_rand(self) -> None:
+        """Varia massa (±20%) e ruído dos sensores (×0.5–2) por episódio —
+        mesma lógica da augmentation do XLC, aplicada à física (sim2real)."""
+        rng = self.np_random
+        cfg = self._agent.robot.config
+        self._agent.robot.body.mass = self._base_mass * rng.uniform(0.8, 1.2)
+        for name, base in self._base_noise.items():
+            getattr(cfg.sensors, name).noise_std = base * rng.uniform(0.5, 2.0)
+
     # ── Observation ───────────────────────────────────────────────────────────
 
     def _observe(self) -> np.ndarray:
@@ -96,13 +119,25 @@ class SoccerEnv(gym.Env):
             p = self._hal
             heading = p.read_compass()
             px, py  = p.read_position()
-            parts = (
+            parts = [
                 p.read_ir(),
                 [math.sin(heading), math.cos(heading)],
                 p.read_ultrasound(),
                 [1.0 if v else 0.0 for v in p.read_line_sensors()],
                 [px / HALF_L, py / HALF_W],
-            )
+            ]
+            # Sensores opcionais (B5/B2) entram na obs se estiverem no YAML
+            try:
+                bvx, bvy = p.read_ball_velocity()
+                parts.append([bvx / MAX_BALL_SPEED, bvy / MAX_BALL_SPEED])
+            except NotImplementedError:
+                pass
+            try:
+                lidar = p.read_opponent_lidar()
+                rng_max = self._agent.robot.config.sensors.opponent_lidar.range
+                parts.append([d / rng_max for d in lidar])
+            except NotImplementedError:
+                pass
             return np.concatenate(parts, dtype=np.float32)
 
         rb    = self._agent.robot.body
@@ -159,6 +194,9 @@ class SoccerEnv(gym.Env):
                 rng.uniform(-math.pi, math.pi),
             )
 
+        if self.domain_rand:
+            self._apply_domain_rand()
+
         self._hal._refresh_percepts()
         return self._observe(), {}
 
@@ -171,6 +209,7 @@ class SoccerEnv(gym.Env):
 
         prev_bg = self._ball_dist_to_goal()
         prev_rb = self._robot_dist_to_ball()
+        prev_violations = sum(self.engine.violation_counts.values())
 
         terminated = False
         reward     = -STEP_PENALTY
@@ -191,6 +230,14 @@ class SoccerEnv(gym.Env):
             if self._agent.penalized:
                 reward    += PENALTY_REWARD
                 terminated = True
+
+        # Violações do árbitro (Rules 2026) atribuídas ao agente
+        if sum(self.engine.violation_counts.values()) > prev_violations:
+            v = self.engine.last_violation
+            if v and (v["robot_id"] == self._agent.robot_id
+                      or (v["kind"] == "pushing"
+                          and self._agent.robot_id in v["detail"])):
+                reward += VIOLATION_REWARD
 
         self._steps += 1
         truncated = not terminated and self._steps >= self.max_steps

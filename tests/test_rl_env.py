@@ -114,3 +114,54 @@ def test_pettingzoo_goal_rewards_are_opposed():
     assert all(terms.values())
     assert rewards["blue_1"] > 5.0 and rewards["blue_2"] > 5.0
     assert rewards["yellow_1"] < -5.0 and rewards["yellow_2"] < -5.0
+
+
+# ── Upgrades: referee no reward, domain randomization, sensores novos ────────
+
+def test_domain_rand_varies_mass_and_noise():
+    e = SoccerEnv(seed=3, domain_rand=True)
+    base_mass = e._base_mass
+    masses, noises = set(), set()
+    for _ in range(5):
+        e.reset()
+        masses.add(round(e._agent.robot.body.mass, 5))
+        noises.add(round(e._agent.robot.config.sensors.ir_ring.noise_std, 5))
+    assert len(masses) > 1 and len(noises) > 1
+    assert all(0.8 * base_mass <= m <= 1.2 * base_mass for m in masses)
+
+
+def test_domain_rand_off_keeps_mass():
+    e = SoccerEnv(seed=3, domain_rand=False)
+    m0 = e._agent.robot.body.mass
+    e.reset()
+    assert e._agent.robot.body.mass == m0
+
+
+def test_violation_penalizes_reward(tmp_path):
+    # Agente parado com a bola colada → holding → reward negativo no tick
+    e = SoccerEnv(seed=5, randomize=False, opponent_config=None)
+    e.reset()
+    e.engine.set_robot_pose("blue_1", 0.3, 0.3, 0.0)
+    e.engine.set_ball_pose(0.455, 0.3)
+    from sim.referee import HOLDING_TICKS
+    total_before = sum(e.engine.violation_counts.values())
+    rewards = []
+    for _ in range(HOLDING_TICKS // e.frame_skip + 20):
+        _, r, term, trunc, _ = e.step(np.zeros(4))
+        rewards.append(r)
+        if term or trunc:
+            break
+    assert sum(e.engine.violation_counts.values()) > total_before
+    from rl.env import VIOLATION_REWARD
+    assert min(rewards) <= VIOLATION_REWARD + 0.5   # tick da violação punido
+
+
+def test_percepts_obs_includes_new_sensors():
+    # example.yaml tem ball_velocity + opponent_lidar → obs maior
+    e_full = SoccerEnv(agent_config="robots/example.yaml",
+                       obs_mode="percepts", seed=1)
+    e_base = SoccerEnv(agent_config="robots/striker_v3.yaml",
+                       obs_mode="percepts", seed=1)
+    # 2 floats de ball_velocity + 5 do lidar do example.yaml
+    assert (e_full.observation_space.shape[0]
+            >= e_base.observation_space.shape[0] + 7)

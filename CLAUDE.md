@@ -88,6 +88,13 @@ Eixo Y = largura do campo.
 | `read_ultrasound()` | `[float]` metros | Direções do YAML em graus relativos ao heading |
 | `read_line_sensors()` | `[bool]` | `[frente, trás, direita, esquerda]` por padrão |
 | `read_position()` | `(float, float)` metros | Posição world (x, y) — sim usa PyMunk diretamente |
+| `read_ball_velocity()` | `(vx, vy)` m/s | Frame do mundo; requer `sensors.ball_velocity` no YAML |
+| `read_opponent_lidar()` | `[float]` metros | Detecta SÓ robôs (ignora bola/paredes); requer `sensors.opponent_lidar` |
+
+**Atuadores extras:** `kick(angle_deg=0)` — direção dentro de `kicker.aim_range`
+(0 = só frontal, 360 = qualquer direção); `set_dribbler(on)` — requer bloco
+`dribbler:` no YAML (position front/back, strength, capture_radius); dribbler
+ativo segura a bola (mola + amortecimento) e isenta a regra de holding.
 
 **Frame local do robô:**
 - `vx` positivo = frente
@@ -344,6 +351,8 @@ python -m sim --no-referee                                   # desliga o árbitr
 # Estratégias
 python -m sim --strategy examples.attacker_strategy
 python -m sim --strategy examples.defender_strategy
+python -m sim --strategy examples.state_machine_strategy  # template Aperture
+python -m sim --strategy examples.fuzzy_strategy           # template MegaHertz
 python -m sim --strategy bridge.cpp_attacker        # C++ compilado
 
 # Compilar bridge C++
@@ -356,6 +365,7 @@ cd frontend && npm run dev    # → http://localhost:5173
 # RL (Fase 6)
 python -m rl.train --timesteps 200000                     # treina PPO
 python -m rl.train --obs-mode percepts --n-envs 8         # obs realistas
+python -m rl.train --domain-rand                          # sim2real: massa/ruído variam
 python - <<'EOF'                                          # PettingZoo 2v2
 from rl.soccer_pz import SoccerParallelEnv
 env = SoccerParallelEnv(); obs, _ = env.reset(seed=0)

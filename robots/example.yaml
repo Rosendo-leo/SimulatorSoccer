@@ -26,6 +26,16 @@ robot:
       range: 2.0
       noise_std: 0.03
 
+    # Velocidade absoluta da bola (m/s, frame do mundo) — p/ interceptação
+    ball_velocity:
+      noise_std: 0.05
+
+    # Feixe de ToF que detecta só robôs (estilo Leopard: 5 sensores a 20°)
+    opponent_lidar:
+      directions: [-40, -20, 0, 20, 40]
+      range: 1.0
+      noise_std: 0.02
+
     line_sensors:
       count: 4
       positions:

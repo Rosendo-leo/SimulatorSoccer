@@ -30,8 +30,13 @@ class HardwareHAL(HAL):
         # TODO: convert vx/vy/omega to individual wheel speeds and send PWM
         raise NotImplementedError
 
-    def kick(self) -> None:
+    def kick(self, angle_deg: float = 0.0) -> None:
         # TODO: pulse the solenoid / servo that controls the kicker
+        # (com 2 solenoides ortogonais, decompor angle_deg entre eles)
+        raise NotImplementedError
+
+    def set_dribbler(self, on: bool) -> None:
+        # TODO: ligar/desligar o motor do rolete do dribbler
         raise NotImplementedError
 
     def read_position(self) -> tuple[float, float]:

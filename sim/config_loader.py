@@ -65,17 +65,54 @@ class LineSensorsConfig:
 
 
 @dataclass
+class BallVelocityConfig:
+    """Sensor de velocidade absoluta da bola (estilo Leopard: sensor óptico
+    de movimento). Retorna (vx, vy) em m/s no frame do MUNDO, com ruído."""
+    noise_std: float = 0.05
+
+
+@dataclass
+class OpponentLidarConfig:
+    """Feixe de sensores de distância que detecta apenas ROBÔS (estilo
+    Leopard: 5 ToF a 20°). Ignora paredes e bola; detecta qualquer robô,
+    inclusive o parceiro — como um ToF real faria."""
+    directions: List[float] = field(default_factory=lambda: [-40, -20, 0, 20, 40])
+    range: float = 1.0
+    noise_std: float = 0.02
+
+
+@dataclass
 class SensorsConfig:
     ir_ring: Optional[IRRingConfig] = None
     compass: Optional[CompassConfig] = None
     ultrasound: Optional[UltrasoundConfig] = None
     line_sensors: Optional[LineSensorsConfig] = None
+    ball_velocity: Optional[BallVelocityConfig] = None
+    opponent_lidar: Optional[OpponentLidarConfig] = None
 
 
 @dataclass
 class KickerConfig:
     force: float = 5.0
     cooldown: float = 2.0
+    # Setor de chute dirigível, em graus centrado na frente (B4, estilo
+    # Leopard com 2 solenoides): 0 = só frontal (default), 90 = ±45°,
+    # 360 = chuta em qualquer direção. Use hal.kick(angle_deg).
+    aim_range: float = 0.0
+
+
+@dataclass
+class DribblerConfig:
+    """Dribbler (B3): rolete que mantém a bola presa por backspin.
+
+    Modelo 2D: força-mola puxando a bola para a 'boca' do dribbler +
+    amortecimento da velocidade relativa (efeito do backspin). Robôs com
+    dribbler ATIVO ficam isentos da violação de holding (Rule 2.5.2);
+    a boca fica fora do corpo, respeitando a zona de captura ≤ 1,5 cm.
+    """
+    position: str = "front"         # front | back
+    strength: float = 1.0           # multiplicador da força de captura
+    capture_radius: float = 0.05    # alcance da captura a partir da boca (m)
 
 
 @dataclass
@@ -101,6 +138,7 @@ class RobotConfig:
     wheels: WheelsConfig = field(default_factory=WheelsConfig)
     sensors: SensorsConfig = field(default_factory=SensorsConfig)
     kicker: Optional[KickerConfig] = None
+    dribbler: Optional[DribblerConfig] = None
     visual: Optional[VisualConfig] = None
 
 
@@ -180,6 +218,21 @@ def _validate(cfg: RobotConfig) -> None:
                  f"sensors.ultrasound.noise_std must be >= 0, got {s.ultrasound.noise_std}")
         for d in s.ultrasound.directions:
             _num(d, "sensors.ultrasound.directions[]")
+    if s.ball_velocity:
+        _require(s.ball_velocity.noise_std >= 0,
+                 f"sensors.ball_velocity.noise_std must be >= 0, "
+                 f"got {s.ball_velocity.noise_std}")
+    if s.opponent_lidar:
+        _require(len(s.opponent_lidar.directions) >= 1,
+                 "sensors.opponent_lidar.directions must not be empty")
+        _require(s.opponent_lidar.range > 0,
+                 f"sensors.opponent_lidar.range must be positive, "
+                 f"got {s.opponent_lidar.range}")
+        _require(s.opponent_lidar.noise_std >= 0,
+                 f"sensors.opponent_lidar.noise_std must be >= 0, "
+                 f"got {s.opponent_lidar.noise_std}")
+        for d in s.opponent_lidar.directions:
+            _num(d, "sensors.opponent_lidar.directions[]")
     if s.line_sensors:
         for i, pos in enumerate(s.line_sensors.positions):
             _require(len(pos) == 2,
@@ -195,6 +248,20 @@ def _validate(cfg: RobotConfig) -> None:
                  f"kicker.force must be positive, got {cfg.kicker.force}")
         _require(cfg.kicker.cooldown >= 0,
                  f"kicker.cooldown must be >= 0, got {cfg.kicker.cooldown}")
+        _require(0 <= cfg.kicker.aim_range <= 360,
+                 f"kicker.aim_range must be in [0, 360] degrees, "
+                 f"got {cfg.kicker.aim_range}")
+
+    if cfg.dribbler:
+        d = cfg.dribbler
+        _require(d.position in ("front", "back"),
+                 f"dribbler.position must be 'front' or 'back', "
+                 f"got {d.position!r}")
+        _require(d.strength > 0,
+                 f"dribbler.strength must be positive, got {d.strength}")
+        _require(0 < d.capture_radius <= 0.08,
+                 f"dribbler.capture_radius must be in (0, 0.08] m, "
+                 f"got {d.capture_radius}")
 
     if cfg.visual:
         v = cfg.visual
@@ -269,12 +336,36 @@ def load_robot_config(path: str) -> RobotConfig:
             positions=[tuple(p) for p in d.get("positions", [])],
         )
 
+    if "ball_velocity" in sd:
+        d = sd["ball_velocity"] or {}
+        sensors.ball_velocity = BallVelocityConfig(
+            noise_std=d.get("noise_std", 0.05),
+        )
+
+    if "opponent_lidar" in sd:
+        d = sd["opponent_lidar"] or {}
+        sensors.opponent_lidar = OpponentLidarConfig(
+            directions=d.get("directions", [-40, -20, 0, 20, 40]),
+            range=d.get("range", 1.0),
+            noise_std=d.get("noise_std", 0.02),
+        )
+
     kicker = None
     if "kicker" in r:
         d = r["kicker"]
         kicker = KickerConfig(
             force=d.get("force", 5.0),
             cooldown=d.get("cooldown", 2.0),
+            aim_range=d.get("aim_range", 0.0),
+        )
+
+    dribbler = None
+    if "dribbler" in r and r["dribbler"]:
+        d = r["dribbler"]
+        dribbler = DribblerConfig(
+            position=d.get("position", "front"),
+            strength=d.get("strength", 1.0),
+            capture_radius=d.get("capture_radius", 0.05),
         )
 
     visual = None
@@ -294,6 +385,7 @@ def load_robot_config(path: str) -> RobotConfig:
         wheels=wheels,
         sensors=sensors,
         kicker=kicker,
+        dribbler=dribbler,
         visual=visual,
     )
     _validate(cfg)
