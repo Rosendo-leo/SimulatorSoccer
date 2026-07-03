@@ -1,0 +1,68 @@
+name: Release Desktop
+
+# Builda e publica o instalador Windows (.exe) com auto-update.
+# Dispara ao criar uma tag v* (ex.: git tag v0.1.0 && git push --tags).
+# Secrets necessários (Settings → Secrets → Actions):
+#   TAURI_SIGNING_PRIVATE_KEY          — conteúdo de ~/.tauri/rcjsim.key
+#   TAURI_SIGNING_PRIVATE_KEY_PASSWORD — senha da chave (vazio se sem senha)
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Build sidecar Python (PyInstaller)
+        run: |
+          pip install -r requirements.txt pyinstaller
+          pyinstaller packaging/rcj-server.spec --distpath packaging/dist
+          New-Item -ItemType Directory -Force src-tauri/binaries | Out-Null
+          Copy-Item packaging/dist/rcj-server.exe src-tauri/binaries/rcj-server-x86_64-pc-windows-msvc.exe
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install npm deps
+        run: |
+          npm ci
+          npm ci --prefix frontend
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      - name: Sync app version with tag
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          $version = "${{ github.ref_name }}".TrimStart("v")
+          $conf = Get-Content src-tauri/tauri.conf.json -Raw | ConvertFrom-Json
+          $conf.version = $version
+          $conf | ConvertTo-Json -Depth 32 | Set-Content src-tauri/tauri.conf.json -Encoding utf8
+          Write-Host "App version set to $version"
+
+      - name: Build and publish release (Tauri)
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        with:
+          tagName: ${{ github.ref_name }}
+          releaseName: "RCJ Soccer Simulator ${{ github.ref_name }}"
+          releaseBody: "Instalador Windows com auto-update. Baixe o `.exe` abaixo."
+          releaseDraft: false
+          prerelease: false

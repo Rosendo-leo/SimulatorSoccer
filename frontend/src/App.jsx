@@ -3,6 +3,7 @@ import yaml from 'js-yaml'
 import RobotPreview from './components/RobotPreview'
 import SimViewer   from './components/SimViewer'
 import { API_BASE } from './config'
+import { checkForAppUpdate } from './updater'
 import './App.css'
 
 // ── Default config ────────────────────────────────────────────────────────────
@@ -103,6 +104,11 @@ export default function App() {
       obj[path[path.length - 1]] = value
       return { robot }
     })
+  }, [])
+
+  // Auto-update (só no app desktop Tauri; no-op no navegador)
+  useEffect(() => {
+    checkForAppUpdate().catch(() => {})
   }, [])
 
   // Fetch robot list from server

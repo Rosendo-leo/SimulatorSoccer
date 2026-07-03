@@ -13,11 +13,9 @@ import yaml
 from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 
-ROBOTS_DIR     = Path(__file__).parent.parent / "robots"
-EXAMPLES_DIR   = Path(__file__).parent.parent / "examples"
-BRIDGE_DIR     = Path(__file__).parent.parent / "bridge"
-RECORDINGS_DIR = Path(__file__).parent.parent / "recordings"
-SCENARIOS_DIR  = Path(__file__).parent.parent / "scenarios"
+from server.paths import (
+    ROBOTS_DIR, EXAMPLES_DIR, BRIDGE_DIR, RECORDINGS_DIR, SCENARIOS_DIR,
+)
 
 # Só módulos destes pacotes podem ser importados via WebSocket/REST
 _STRATEGY_PREFIXES = ("examples.", "bridge.")
@@ -151,6 +149,8 @@ app = FastAPI(title="RCJ Soccer Simulator API", lifespan=lifespan)
 #   CORS_ORIGINS=https://meu-sim.vercel.app,https://meudominio.com
 _cors_origins = [
     "http://localhost:5173", "http://127.0.0.1:5173", "http://localhost:3000",
+    # Webview do app desktop (Tauri)
+    "http://tauri.localhost", "https://tauri.localhost", "tauri://localhost",
 ] + [o.strip() for o in os.environ.get("CORS_ORIGINS", "").split(",") if o.strip()]
 
 app.add_middleware(

@@ -205,7 +205,8 @@ LINE_HALF_THICKNESS = 0.010 # 10 mm — tolerância de detecção de linha
   `restart` aceita `blue`/`yellow` (lista) + `blue_strategy`/`yellow_strategy`;
   módulos de estratégia restritos aos prefixos `examples.`/`bridge.`;
   REST: `GET /api/strategies`, `GET /api/match`
-- ❌ Empacotamento Tauri → `.exe` Windows + `.AppImage` Linux
+- ✅ Empacotamento Tauri → `.exe` Windows com auto-update (ver seção Desktop abaixo);
+  `.AppImage` Linux ainda pendente
 - ⚠️ Deploy web (Vercel + backend no Render free / GCP e2-micro) — código pronto:
   - Frontend: `VITE_SERVER_URL=https://<backend>` na Vercel (REST + WS derivado
     p/ `wss://` em `frontend/src/config.js`); vazio em dev → proxy Vite + localhost
@@ -252,6 +253,46 @@ LINE_HALF_THICKNESS = 0.010 # 10 mm — tolerância de detecção de linha
   (perf_counter) com catch-up de até 8 steps por iteração → 60 ticks/s reais
 - ✅ ~~Viewer 3D usa raio fixo 0.11 m~~ — `get_state()` serializa `radius` e `name`
   por robô; o viewer escala corpo/anel/seta pelo raio real
+
+---
+
+## Desktop (.exe Windows com auto-update)
+
+Arquitetura: **Tauri 2** (shell + webview) inicia o backend Python como sidecar
+(`server/desktop.py` congelado com PyInstaller → `rcj-server.exe`, escuta em
+`127.0.0.1:8765`). No exe, os diretórios graváveis (`robots/`, `recordings/`,
+`scenarios/`) vão para `%APPDATA%\RCJSoccerSim` (ver `server/paths.py`;
+override com `RCJ_DATA_DIR`). O frontend é buildado com `--mode tauri`
+(`frontend/.env.tauri` aponta para o sidecar local).
+
+**Auto-update:** plugin updater do Tauri + GitHub Releases. O app checa
+`releases/latest/download/latest.json` ao abrir (`frontend/src/updater.js`)
+e instala com confirmação do usuário. Artefatos assinados (minisign) — chaves
+em `~/.tauri/rcjsim.key{,.pub}` (privada NUNCA comitada; pubkey está no
+`src-tauri/tauri.conf.json`).
+
+**Release:** basta criar uma tag — o workflow `.github/workflows/release.yml`
+builda tudo (PyInstaller + frontend + NSIS), assina e publica:
+
+```bash
+git tag v0.1.0 && git push origin v0.1.0
+```
+
+A versão do app é sincronizada com a tag pelo CI (não precisa bumpar
+`tauri.conf.json` manualmente). Secrets necessários no repo (Actions):
+`TAURI_SIGNING_PRIVATE_KEY` (conteúdo de `~/.tauri/rcjsim.key`) e
+`TAURI_SIGNING_PRIVATE_KEY_PASSWORD` (vazio).
+
+**Build local:**
+
+```bash
+# 1. Sidecar Python
+.venv/Scripts/python.exe -m PyInstaller packaging/rcj-server.spec --distpath packaging/dist --noconfirm
+cp packaging/dist/rcj-server.exe src-tauri/binaries/rcj-server-x86_64-pc-windows-msvc.exe
+# 2. App (exige Rust + assinatura p/ updater artifacts)
+export TAURI_SIGNING_PRIVATE_KEY="$(cat ~/.tauri/rcjsim.key)"
+npx tauri build          # instalador em src-tauri/target/release/bundle/nsis/
+```
 
 ---
 
