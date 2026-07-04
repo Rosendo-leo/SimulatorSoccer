@@ -314,6 +314,14 @@ def list_robots() -> list[str]:
     return sorted(p.stem for p in ROBOTS_DIR.glob("*.yaml"))
 
 
+@app.get("/api/meshes")
+def list_meshes() -> list[str]:
+    d = ROBOTS_DIR / "meshes"
+    if not d.exists():
+        return []
+    return sorted(p.name for p in d.glob("*.glb"))
+
+
 @app.get("/api/meshes/{name}")
 def get_mesh(name: str):
     """Serve malhas .glb de robots/meshes/ para o viewer 3D."""

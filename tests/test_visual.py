@@ -98,3 +98,30 @@ def test_mesh_endpoint_404(client):
 def test_mesh_endpoint_rejects_traversal(client):
     assert client.get("/api/meshes/..%5Cexample.yaml").status_code == 400
     assert client.get("/api/meshes/x.stl").status_code == 400
+
+
+def test_mesh_list_endpoint(client):
+    lst = client.get("/api/meshes").json()
+    assert "demo.glb" in lst
+
+
+def test_null_blocks_mean_absent(tmp_path):
+    # Toggles desligados no Builder exportam `bloco: null` — deve valer ausente
+    p = tmp_path / "r.yaml"
+    p.write_text("""
+robot:
+  name: T
+  body: { radius: 0.10 }
+  kicker: null
+  dribbler: null
+  visual: null
+  sensors:
+    ir_ring: null
+    ball_velocity: null
+""")
+    cfg = load_robot_config(str(p))
+    assert cfg.kicker is None
+    assert cfg.dribbler is None
+    assert cfg.visual is None
+    assert cfg.sensors.ir_ring is None
+    assert cfg.sensors.ball_velocity is None

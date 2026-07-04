@@ -24,6 +24,11 @@ export default function SimViewer() {
   const [wsOk,  setWsOk]  = useState(false)
   const [speed, setSpeed] = useState(1.0)
 
+  // Badge de violação do árbitro (Rules 2026)
+  const [violation, setViolation] = useState(null)
+  const vioTickRef  = useRef(null)   // null = ainda não viu nenhum frame
+  const vioTimerRef = useRef(null)
+
   // ── Match setup state ─────────────────────────────────────────────
   const [setupOpen,  setSetupOpen]  = useState(false)
   const [robots,     setRobots]     = useState([])
@@ -552,6 +557,17 @@ export default function SimViewer() {
 
         if (replayRef.current) return   // replay mode: ignore live frames
 
+        // Badge do árbitro: mostra violações novas (ignora a herdada ao conectar)
+        const vio = state.referee?.last_violation
+        if (vioTickRef.current === null) {
+          vioTickRef.current = vio?.tick ?? -1
+        } else if (vio && vio.tick !== vioTickRef.current) {
+          vioTickRef.current = vio.tick
+          setViolation(vio)
+          clearTimeout(vioTimerRef.current)
+          vioTimerRef.current = setTimeout(() => setViolation(null), 3500)
+        }
+
         setHud({ score: state.score, state: state.state, time: state.timestamp })
         objRef.current.applyFrame(state)
       }
@@ -655,6 +671,19 @@ export default function SimViewer() {
           <span className="sv-name">{t('sv.team.yellow')}</span>
         </div>
       </div>
+
+      {/* Referee violation badge */}
+      {violation && (
+        <div className="sv-violation">
+          <span className="sv-violation-icon">⚖</span>
+          {t(`ref.${violation.kind}`)}
+          {violation.robot_id && (
+            <span className={`sv-violation-robot ${violation.robot_id.split('_')[0]}`}>
+              {violation.robot_id}
+            </span>
+          )}
+        </div>
+      )}
 
       {/* Controls bar */}
       <div className="sv-bar">

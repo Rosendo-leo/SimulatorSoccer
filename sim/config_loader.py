@@ -308,20 +308,20 @@ def load_robot_config(path: str) -> RobotConfig:
     sd = r.get("sensors", {})
     sensors = SensorsConfig()
 
-    if "ir_ring" in sd:
-        d = sd["ir_ring"]
+    d = sd.get("ir_ring")
+    if d is not None:
         sensors.ir_ring = IRRingConfig(
             count=d.get("count", 16),
             range=d.get("range", 1.5),
             noise_std=d.get("noise_std", 0.05),
         )
 
-    if "compass" in sd:
-        d = sd["compass"]
+    d = sd.get("compass")
+    if d is not None:
         sensors.compass = CompassConfig(noise_std=d.get("noise_std", 2.0))
 
-    if "ultrasound" in sd:
-        d = sd["ultrasound"]
+    d = sd.get("ultrasound")
+    if d is not None:
         sensors.ultrasound = UltrasoundConfig(
             count=d.get("count", 4),
             directions=d.get("directions", [0, 90, 180, 270]),
@@ -329,29 +329,30 @@ def load_robot_config(path: str) -> RobotConfig:
             noise_std=d.get("noise_std", 0.03),
         )
 
-    if "line_sensors" in sd:
-        d = sd["line_sensors"]
+    d = sd.get("line_sensors")
+    if d is not None:
         sensors.line_sensors = LineSensorsConfig(
             count=d.get("count", 4),
             positions=[tuple(p) for p in d.get("positions", [])],
         )
 
-    if "ball_velocity" in sd:
-        d = sd["ball_velocity"] or {}
+    d = sd.get("ball_velocity")
+    if d is not None:
         sensors.ball_velocity = BallVelocityConfig(
             noise_std=d.get("noise_std", 0.05),
         )
 
-    if "opponent_lidar" in sd:
-        d = sd["opponent_lidar"] or {}
+    d = sd.get("opponent_lidar")
+    if d is not None:
         sensors.opponent_lidar = OpponentLidarConfig(
             directions=d.get("directions", [-40, -20, 0, 20, 40]),
             range=d.get("range", 1.0),
             noise_std=d.get("noise_std", 0.02),
         )
 
+    # `bloco: null` no YAML (ex.: toggle desligado no Builder) = ausente
     kicker = None
-    if "kicker" in r:
+    if r.get("kicker"):
         d = r["kicker"]
         kicker = KickerConfig(
             force=d.get("force", 5.0),

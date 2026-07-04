@@ -93,9 +93,11 @@ export default function App() {
   const [status, setStatus]       = useState(null)   // { type: 'ok'|'err', msg }
   const [loading, setLoading]     = useState(false)
   const [prefsOpen, setPrefsOpen] = useState(false)
+  const [meshList, setMeshList]   = useState([])
   const fileRef = useRef(null)
 
   const r = config.robot
+  const league = r.league ?? 'infrared'
 
   // Helper: update any nested path in config.robot
   const set = useCallback((path, value) => {
@@ -116,11 +118,15 @@ export default function App() {
     checkForAppUpdate().catch(() => {})
   }, [])
 
-  // Fetch robot list from server
+  // Fetch robot + mesh lists from server
   useEffect(() => {
     fetch(`${API_BASE}/api/robots`)
       .then(r => r.json())
       .then(setRobotList)
+      .catch(() => {})
+    fetch(`${API_BASE}/api/meshes`)
+      .then(r => r.json())
+      .then(setMeshList)
       .catch(() => {})
   }, [])
 
@@ -198,6 +204,14 @@ export default function App() {
             placeholder="My Robot"
           />
         </Field>
+        <Field label={t('f.league')} hint={t('f.league.hint')}>
+          <div className="tag-group">
+            <Tag active={league === 'infrared'}
+              onClick={() => set(['league'], 'infrared')}>{t('f.infrared')}</Tag>
+            <Tag active={league === 'vision'}
+              onClick={() => set(['league'], 'vision')}>{t('f.vision')}</Tag>
+          </div>
+        </Field>
       </Section>
     )
   }
@@ -214,8 +228,10 @@ export default function App() {
         </Field>
 
         {b.shape === 'circle' ? (
-          <Field label={t('f.radius')} hint={t('f.radius.hint')}>
-            <Slider value={b.radius} min={0.05} max={0.11} step={0.005} unit=" m"
+          <Field label={t('f.radius')}
+            hint={league === 'vision' ? 'max 0.09 m' : 'max 0.11 m'}>
+            <Slider value={b.radius} min={0.05}
+              max={league === 'vision' ? 0.09 : 0.11} step={0.005} unit=" m"
               onChange={v => set(['body', 'radius'], v)} />
           </Field>
         ) : (
@@ -231,8 +247,10 @@ export default function App() {
           </>
         )}
 
-        <Field label={t('f.mass')}>
-          <Slider value={b.mass} min={0.5} max={3.0} step={0.05} unit=" kg"
+        <Field label={t('f.mass')}
+          hint={league === 'infrared' ? 'max 1.5 kg' : undefined}>
+          <Slider value={b.mass} min={0.5}
+            max={league === 'infrared' ? 1.5 : 3.0} step={0.05} unit=" kg"
             onChange={v => set(['body', 'mass'], v)} />
         </Field>
         <Field label={t('f.maxspeed')}>
@@ -419,6 +437,84 @@ export default function App() {
             </div>
           </Field>
         </div>
+
+        {/* Ball velocity (B5) */}
+        <div className="subsection">
+          <div className="subsection-title">{t('sub.ballvel')}</div>
+          <Field label={t('f.enable')} hint={t('sub.ballvel.hint')}>
+            <label className="toggle">
+              <input type="checkbox" checked={!!s.ball_velocity}
+                onChange={e => set(['sensors', 'ball_velocity'],
+                  e.target.checked ? { noise_std: 0.05 } : null)}
+              />
+              <span className="toggle-track" />
+            </label>
+          </Field>
+          {s.ball_velocity && (
+            <Field label={t('f.noise')}>
+              <Slider value={s.ball_velocity.noise_std ?? 0.05} min={0} max={0.3}
+                step={0.01}
+                onChange={v => set(['sensors', 'ball_velocity', 'noise_std'], v)} />
+            </Field>
+          )}
+        </div>
+
+        {/* Opponent lidar (B2) */}
+        <div className="subsection">
+          <div className="subsection-title">{t('sub.lidar')}</div>
+          <Field label={t('f.enable')} hint={t('sub.lidar.hint')}>
+            <label className="toggle">
+              <input type="checkbox" checked={!!s.opponent_lidar}
+                onChange={e => set(['sensors', 'opponent_lidar'],
+                  e.target.checked
+                    ? { directions: [-40, -20, 0, 20, 40], range: 1.0, noise_std: 0.02 }
+                    : null)}
+              />
+              <span className="toggle-track" />
+            </label>
+          </Field>
+          {s.opponent_lidar && (
+            <>
+              <Field label={t('f.range')}>
+                <Slider value={s.opponent_lidar.range ?? 1.0} min={0.3} max={3.0}
+                  step={0.1} unit=" m"
+                  onChange={v => set(['sensors', 'opponent_lidar', 'range'], v)} />
+              </Field>
+              <Field label={t('f.noise')}>
+                <Slider value={s.opponent_lidar.noise_std ?? 0.02} min={0} max={0.2}
+                  step={0.01}
+                  onChange={v => set(['sensors', 'opponent_lidar', 'noise_std'], v)} />
+              </Field>
+              <Field label={t('f.directions')}>
+                <div className="list-items">
+                  {(s.opponent_lidar.directions ?? []).map((dir, i) => (
+                    <div key={i} className="list-item">
+                      <span className="list-item-label">L{i + 1}</span>
+                      <NumInput value={dir} min={-180} max={180} step={5}
+                        onChange={v => {
+                          const dirs = [...(s.opponent_lidar.directions ?? [])]
+                          dirs[i] = v
+                          set(['sensors', 'opponent_lidar', 'directions'], dirs)
+                        }}
+                      />
+                      <span className="unit">°</span>
+                      <button className="icon-btn danger" onClick={() => {
+                        const dirs = (s.opponent_lidar.directions ?? [])
+                          .filter((_, j) => j !== i)
+                        set(['sensors', 'opponent_lidar', 'directions'], dirs)
+                      }}>×</button>
+                    </div>
+                  ))}
+                  <button className="add-btn" onClick={() =>
+                    set(['sensors', 'opponent_lidar', 'directions'],
+                        [...(s.opponent_lidar.directions ?? []), 0])}>
+                    {t('f.addsensor')}
+                  </button>
+                </div>
+              </Field>
+            </>
+          )}
+        </div>
       </Section>
     )
   }
@@ -445,6 +541,86 @@ export default function App() {
             <Field label={t('f.cooldown')}>
               <Slider value={k.cooldown} min={0.5} max={10} step={0.5} unit=" s"
                 onChange={v => set(['kicker', 'cooldown'], v)} />
+            </Field>
+            <Field label={t('f.aimrange')} hint={t('f.aimrange.hint')}>
+              <Slider value={k.aim_range ?? 0} min={0} max={360} step={10} unit="°"
+                onChange={v => set(['kicker', 'aim_range'], v)} />
+            </Field>
+          </>
+        )}
+      </Section>
+    )
+  }
+
+  function DribblerSection() {
+    const d = r.dribbler
+    return (
+      <Section title={t('sec.dribbler')} defaultOpen={false}>
+        <Field label={t('f.enable')}>
+          <label className="toggle">
+            <input type="checkbox" checked={!!d}
+              onChange={e => set(['dribbler'], e.target.checked
+                ? { position: 'front', strength: 1.0, capture_radius: 0.05 }
+                : null)}
+            />
+            <span className="toggle-track" />
+          </label>
+        </Field>
+        {d && (
+          <>
+            <Field label={t('f.position')}>
+              <div className="tag-group">
+                <Tag active={d.position === 'front'}
+                  onClick={() => set(['dribbler', 'position'], 'front')}>{t('f.front')}</Tag>
+                <Tag active={d.position === 'back'}
+                  onClick={() => set(['dribbler', 'position'], 'back')}>{t('f.back')}</Tag>
+              </div>
+            </Field>
+            <Field label={t('f.strength')}>
+              <Slider value={d.strength ?? 1.0} min={0.2} max={3.0} step={0.1}
+                onChange={v => set(['dribbler', 'strength'], v)} />
+            </Field>
+            <Field label={t('f.capradius')}>
+              <Slider value={d.capture_radius ?? 0.05} min={0.02} max={0.08}
+                step={0.005} unit=" m"
+                onChange={v => set(['dribbler', 'capture_radius'], v)} />
+            </Field>
+          </>
+        )}
+      </Section>
+    )
+  }
+
+  function VisualSection() {
+    const v = r.visual
+    return (
+      <Section title={t('sec.visual')} defaultOpen={false}>
+        <Field label={t('f.mesh')} hint={t('f.mesh.hint')}>
+          <select className="text-input" value={v?.mesh ?? ''}
+            onChange={e => set(['visual'], e.target.value
+              ? { mesh: e.target.value, scale: v?.scale ?? 1.0,
+                  offset: v?.offset ?? [0, 0, 0],
+                  rotation: v?.rotation ?? [0, 0, 0] }
+              : null)}>
+            <option value="">{t('f.mesh.none')}</option>
+            {meshList.map(m => <option key={m} value={m}>{m}</option>)}
+          </select>
+        </Field>
+        {v && (
+          <>
+            <Field label={t('f.scale')}>
+              <NumInput value={v.scale ?? 1.0} min={0.0001} max={1000} step={0.1}
+                onChange={val => set(['visual', 'scale'], val || 1.0)} />
+            </Field>
+            <Field label={t('f.offsety')}>
+              <NumInput value={v.offset?.[1] ?? 0} min={-0.5} max={0.5} step={0.01}
+                onChange={val => set(['visual', 'offset'],
+                  [v.offset?.[0] ?? 0, val, v.offset?.[2] ?? 0])} />
+            </Field>
+            <Field label={t('f.roty')}>
+              <NumInput value={v.rotation?.[1] ?? 0} min={-180} max={180} step={5}
+                onChange={val => set(['visual', 'rotation'],
+                  [v.rotation?.[0] ?? 0, val, v.rotation?.[2] ?? 0])} />
             </Field>
           </>
         )}
@@ -538,6 +714,8 @@ export default function App() {
           <WheelsSection />
           <SensorsSection />
           <KickerSection />
+          <DribblerSection />
+          <VisualSection />
         </div>
       </main>
 
