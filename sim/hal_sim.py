@@ -17,12 +17,14 @@ class SimHAL(HAL):
         space: pymunk.Space,
         config: RobotConfig,
         rng: np.random.Generator | None = None,
+        robots_provider=None,   # callable -> [(x, y, raio, team)] dos outros
     ) -> None:
         self._robot = robot
         self._ball = ball
         self._space = space
         self._config = config
         self._rng = rng or np.random.default_rng()
+        self._robots_provider = robots_provider
 
         # Command registers (written by strategy, applied each tick)
         self._cmd_vx: float = 0.0
@@ -78,6 +80,17 @@ class SimHAL(HAL):
         if "opponent_lidar" not in self._percepts:
             raise NotImplementedError("sensors.opponent_lidar not configured")
         return list(self._percepts["opponent_lidar"])
+
+    def read_camera_frame(self):
+        cfg = self._config.sensors.camera
+        if cfg is None:
+            raise NotImplementedError("sensors.camera not configured")
+        from sim.camera import render_camera
+        body = self._robot.body
+        others = self._robots_provider() if self._robots_provider else []
+        bx, by = self._ball.body.position
+        return render_camera(cfg, body.position.x, body.position.y,
+                             body.angle, (bx, by), others, self._rng)
 
     # ------------------------------------------------------------------
     # HAL actuator interface

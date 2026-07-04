@@ -104,8 +104,19 @@ class SimEngine:
         else:
             x, y = position
 
-        robot    = Robot(self._space, config, team, x, y, heading)
-        hal      = SimHAL(robot, self._ball, self._space, config, self._rng)
+        robot = Robot(self._space, config, team, x, y, heading)
+
+        def _others(_self_robot=robot):
+            """Outros robôs visíveis pela câmera: [(x, y, raio, team)]."""
+            return [
+                (e.robot.body.position.x, e.robot.body.position.y,
+                 e.robot.config.body.radius, e.team)
+                for e in self._entries
+                if e.robot is not _self_robot and not e.penalized
+            ]
+
+        hal = SimHAL(robot, self._ball, self._space, config, self._rng,
+                     robots_provider=_others)
         robot_id = f"{team}_{sum(1 for e in self._entries if e.team == team) + 1}"
 
         entry = _RobotEntry(robot, hal, strategy_fn, robot_id, team)

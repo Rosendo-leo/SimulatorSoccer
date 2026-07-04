@@ -53,6 +53,15 @@ class HAL(ABC):
         """
         raise NotImplementedError("sensors.ball_velocity not configured")
 
+    def read_camera_frame(self):
+        """Return an RGB camera frame as a numpy array (H, W, 3) uint8.
+
+        Requires `sensors.camera` in the robot YAML (type pinhole /
+        fisheye / catadioptric). Rendered lazily — only costs when called.
+        On hardware, implement by grabbing a frame from the real camera.
+        """
+        raise NotImplementedError("sensors.camera not configured")
+
     def read_opponent_lidar(self) -> List[float]:
         """Return distance (m) to the nearest ROBOT along each configured
         direction; sensor range when nothing is hit.

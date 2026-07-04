@@ -82,6 +82,24 @@ class OpponentLidarConfig:
 
 
 @dataclass
+class CameraConfig:
+    """Câmera simulada (B1) — frame RGB via hal.read_camera_frame().
+
+    Renderização lazy (só quando chamada), rasterizador numpy headless
+    (sim/camera.py). Mantenha a resolução BAIXA (ex. 160×120) — o custo
+    é proporcional a width×height.
+    """
+    type: str = "catadioptric"      # pinhole | fisheye | catadioptric
+    width: int = 160
+    height: int = 120
+    fov: float = 60.0               # pinhole/fisheye: FOV horizontal (graus)
+    direction: float = 0.0          # pinhole/fisheye: direção rel. ao heading
+    height_m: float = 0.25          # altura da lente/espelho (m)
+    range: float = 2.5              # catadioptric: alcance máx no chão (m)
+    noise_std: float = 4.0          # ruído gaussiano por canal (0–255)
+
+
+@dataclass
 class SensorsConfig:
     ir_ring: Optional[IRRingConfig] = None
     compass: Optional[CompassConfig] = None
@@ -89,6 +107,7 @@ class SensorsConfig:
     line_sensors: Optional[LineSensorsConfig] = None
     ball_velocity: Optional[BallVelocityConfig] = None
     opponent_lidar: Optional[OpponentLidarConfig] = None
+    camera: Optional[CameraConfig] = None
 
 
 @dataclass
@@ -233,6 +252,22 @@ def _validate(cfg: RobotConfig) -> None:
                  f"got {s.opponent_lidar.noise_std}")
         for d in s.opponent_lidar.directions:
             _num(d, "sensors.opponent_lidar.directions[]")
+    if s.camera:
+        c = s.camera
+        _require(c.type in ("pinhole", "fisheye", "catadioptric"),
+                 f"sensors.camera.type must be pinhole/fisheye/catadioptric, "
+                 f"got {c.type!r}")
+        _require(16 <= c.width <= 320 and 16 <= c.height <= 320,
+                 f"sensors.camera width/height must be in [16, 320] px, "
+                 f"got {c.width}x{c.height}")
+        _require(10 <= c.fov <= 200,
+                 f"sensors.camera.fov must be in [10, 200] degrees, got {c.fov}")
+        _require(c.height_m > 0,
+                 f"sensors.camera.height_m must be positive, got {c.height_m}")
+        _require(c.range > 0,
+                 f"sensors.camera.range must be positive, got {c.range}")
+        _require(c.noise_std >= 0,
+                 f"sensors.camera.noise_std must be >= 0, got {c.noise_std}")
     if s.line_sensors:
         for i, pos in enumerate(s.line_sensors.positions):
             _require(len(pos) == 2,
@@ -348,6 +383,19 @@ def load_robot_config(path: str) -> RobotConfig:
             directions=d.get("directions", [-40, -20, 0, 20, 40]),
             range=d.get("range", 1.0),
             noise_std=d.get("noise_std", 0.02),
+        )
+
+    d = sd.get("camera")
+    if d is not None:
+        sensors.camera = CameraConfig(
+            type=d.get("type", "catadioptric"),
+            width=int(d.get("width", 160)),
+            height=int(d.get("height", 120)),
+            fov=d.get("fov", 60.0),
+            direction=d.get("direction", 0.0),
+            height_m=d.get("height_m", 0.25),
+            range=d.get("range", 2.5),
+            noise_std=d.get("noise_std", 4.0),
         )
 
     # `bloco: null` no YAML (ex.: toggle desligado no Builder) = ausente

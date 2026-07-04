@@ -39,6 +39,10 @@ class HardwareHAL(HAL):
         # TODO: ligar/desligar o motor do rolete do dribbler
         raise NotImplementedError
 
+    def read_camera_frame(self):
+        # TODO: capturar frame da câmera real (OpenMV / USB / CSI)
+        raise NotImplementedError
+
     def read_position(self) -> tuple[float, float]:
         # TODO: implement via encoder odometry / dead-reckoning
         raise NotImplementedError

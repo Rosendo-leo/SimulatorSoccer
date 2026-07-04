@@ -90,6 +90,7 @@ Eixo Y = largura do campo.
 | `read_position()` | `(float, float)` metros | Posição world (x, y) — sim usa PyMunk diretamente |
 | `read_ball_velocity()` | `(vx, vy)` m/s | Frame do mundo; requer `sensors.ball_velocity` no YAML |
 | `read_opponent_lidar()` | `[float]` metros | Detecta SÓ robôs (ignora bola/paredes); requer `sensors.opponent_lidar` |
+| `read_camera_frame()` | `(H, W, 3)` uint8 | Câmera simulada (B1): `sensors.camera` no YAML, `type: pinhole\|fisheye\|catadioptric`. Render lazy em numpy (`sim/camera.py`, ~6 ms a 160×120), funciona headless. Catadioptric: centro = robô, topo = frente, esquerda da imagem = esquerda do robô |
 
 **Atuadores extras:** `kick(angle_deg=0)` — direção dentro de `kicker.aim_range`
 (0 = só frontal, 360 = qualquer direção); `set_dribbler(on)` — requer bloco
@@ -362,6 +363,7 @@ python -m sim --strategy examples.attacker_strategy
 python -m sim --strategy examples.defender_strategy
 python -m sim --strategy examples.state_machine_strategy  # template Aperture
 python -m sim --strategy examples.fuzzy_strategy           # template MegaHertz
+python -m sim --blue robots/example.yaml --strategy examples.vision_strategy  # câmera
 python -m sim --strategy bridge.cpp_attacker        # C++ compilado
 
 # Compilar bridge C++
