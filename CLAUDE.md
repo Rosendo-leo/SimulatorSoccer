@@ -242,6 +242,15 @@ LINE_HALF_THICKNESS = 0.010 # 10 mm — tolerância de detecção de linha
   robô encostado no próprio gol, um chute, reprova se a bola voltar ao
   próprio gol após rebater no adversário. Exit code 0/1.
 
+### UI: import/export + preferências ✅
+- Header: **⤒ Importar** (upload de `.yaml` → valida `robot:` → abre no Builder
+  para revisar/salvar), **↓ Exportar YAML** (antigo Download) e **⚙ Preferências**.
+- Preferências (`frontend/src/prefs.jsx`, persistidas em localStorage
+  `rcj_prefs`): idioma (**PT-BR padrão** / EN — strings em `i18n.js`),
+  tema dark/light (CSS variables + `[data-theme]` no `<html>`), cores do
+  viewer 3D (campo/time azul/time amarelo — aplicadas aos materiais Three.js
+  sem rebuild da cena) e botão de tela cheia.
+
 ### Malhas 3D no viewer ✅
 - Bloco opcional `visual:` no YAML (`mesh` = arquivo `.glb` em `robots/meshes/`,
   `scale`, `offset` em m nos eixos Three.js, `rotation` em graus). Só cosmético —

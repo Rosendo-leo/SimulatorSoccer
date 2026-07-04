@@ -1,9 +1,11 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import yaml from 'js-yaml'
 import RobotPreview from './components/RobotPreview'
 import SimViewer   from './components/SimViewer'
+import PrefsPanel  from './components/PrefsPanel'
 import { API_BASE } from './config'
 import { checkForAppUpdate } from './updater'
+import { usePrefs } from './prefs.jsx'
 import './App.css'
 
 // ── Default config ────────────────────────────────────────────────────────────
@@ -84,11 +86,14 @@ function Tag({ children, active, onClick, color }) {
 // ── Main App ──────────────────────────────────────────────────────────────────
 
 export default function App() {
+  const { t } = usePrefs()
   const [tab, setTab]             = useState('builder')  // 'builder' | 'viewer'
   const [config, setConfig]       = useState(DEFAULT_ROBOT)
   const [robotList, setRobotList] = useState([])
   const [status, setStatus]       = useState(null)   // { type: 'ok'|'err', msg }
   const [loading, setLoading]     = useState(false)
+  const [prefsOpen, setPrefsOpen] = useState(false)
+  const fileRef = useRef(null)
 
   const r = config.robot
 
@@ -129,15 +134,29 @@ export default function App() {
       const res  = await fetch(`${API_BASE}/api/robots/${name}`)
       const data = await res.json()
       setConfig(data)
-      notify('ok', `Loaded "${name}"`)
+      notify('ok', t('st.loaded', name))
     } catch {
-      notify('err', 'Failed to load robot')
+      notify('err', t('st.loadfail'))
     }
+  }
+
+  function importYaml(ev) {
+    const file = ev.target.files?.[0]
+    ev.target.value = ''            // permite re-importar o mesmo arquivo
+    if (!file) return
+    file.text().then(text => {
+      const data = yaml.load(text)
+      if (!data || typeof data !== 'object' || !data.robot)
+        throw new Error('missing robot key')
+      setConfig(data)
+      setTab('builder')
+      notify('ok', t('st.imported', data.robot.name ?? file.name))
+    }).catch(() => notify('err', t('st.importfail')))
   }
 
   async function saveRobot() {
     const name = r.name.trim().toLowerCase().replace(/\s+/g, '_')
-    if (!name) return notify('err', 'Robot name is empty')
+    if (!name) return notify('err', t('st.noname'))
     setLoading(true)
     try {
       const res = await fetch(`${API_BASE}/api/robots/${name}`, {
@@ -146,11 +165,11 @@ export default function App() {
         body: JSON.stringify(config),
       })
       if (!res.ok) throw new Error()
-      notify('ok', `Saved as robots/${name}.yaml`)
+      notify('ok', t('st.saved', name))
       const list = await fetch(`${API_BASE}/api/robots`).then(r => r.json())
       setRobotList(list)
     } catch {
-      notify('err', 'Server unavailable — use Download instead')
+      notify('err', t('st.savefail'))
     } finally {
       setLoading(false)
     }
@@ -172,8 +191,8 @@ export default function App() {
 
   function BasicSection() {
     return (
-      <Section title="Identity">
-        <Field label="Name">
+      <Section title={t('sec.identity')}>
+        <Field label={t('f.name')}>
           <input className="text-input" value={r.name}
             onChange={e => set(['name'], e.target.value)}
             placeholder="My Robot"
@@ -186,37 +205,37 @@ export default function App() {
   function BodySection() {
     const b = r.body
     return (
-      <Section title="Body">
-        <Field label="Shape">
+      <Section title={t('sec.body')}>
+        <Field label={t('f.shape')}>
           <div className="tag-group">
-            <Tag active={b.shape === 'circle'}  onClick={() => set(['body', 'shape'], 'circle')}>Circle</Tag>
-            <Tag active={b.shape === 'rectangle'} onClick={() => set(['body', 'shape'], 'rectangle')}>Rectangle</Tag>
+            <Tag active={b.shape === 'circle'}  onClick={() => set(['body', 'shape'], 'circle')}>{t('f.circle')}</Tag>
+            <Tag active={b.shape === 'rectangle'} onClick={() => set(['body', 'shape'], 'rectangle')}>{t('f.rect')}</Tag>
           </div>
         </Field>
 
         {b.shape === 'circle' ? (
-          <Field label="Radius" hint="max 0.11 m">
+          <Field label={t('f.radius')} hint={t('f.radius.hint')}>
             <Slider value={b.radius} min={0.05} max={0.11} step={0.005} unit=" m"
               onChange={v => set(['body', 'radius'], v)} />
           </Field>
         ) : (
           <>
-            <Field label="Width">
+            <Field label={t('f.width')}>
               <Slider value={b.width ?? 0.20} min={0.10} max={0.22} step={0.01} unit=" m"
                 onChange={v => set(['body', 'width'], v)} />
             </Field>
-            <Field label="Height">
+            <Field label={t('f.height')}>
               <Slider value={b.height ?? 0.18} min={0.10} max={0.22} step={0.01} unit=" m"
                 onChange={v => set(['body', 'height'], v)} />
             </Field>
           </>
         )}
 
-        <Field label="Mass">
+        <Field label={t('f.mass')}>
           <Slider value={b.mass} min={0.5} max={3.0} step={0.05} unit=" kg"
             onChange={v => set(['body', 'mass'], v)} />
         </Field>
-        <Field label="Max speed">
+        <Field label={t('f.maxspeed')}>
           <Slider value={b.max_speed} min={0.3} max={2.5} step={0.05} unit=" m/s"
             onChange={v => set(['body', 'max_speed'], v)} />
         </Field>
@@ -240,16 +259,16 @@ export default function App() {
     }
 
     return (
-      <Section title="Drive System">
-        <Field label="Type">
+      <Section title={t('sec.drive')}>
+        <Field label={t('f.type')}>
           <div className="tag-group">
-            <Tag active={isOmni} onClick={() => set(['wheels', 'type'], 'omnidirectional')}>Omnidirectional</Tag>
-            <Tag active={!isOmni} onClick={() => set(['wheels', 'type'], 'differential')}>Differential</Tag>
+            <Tag active={isOmni} onClick={() => set(['wheels', 'type'], 'omnidirectional')}>{t('f.omni')}</Tag>
+            <Tag active={!isOmni} onClick={() => set(['wheels', 'type'], 'differential')}>{t('f.diff')}</Tag>
           </div>
         </Field>
 
         {isOmni && (
-          <Field label="Wheels">
+          <Field label={t('f.wheels')}>
             <div className="list-items">
               {(w.positions ?? []).map((angle, i) => (
                 <div key={i} className="list-item">
@@ -265,13 +284,13 @@ export default function App() {
                   <button className="icon-btn danger" onClick={() => removeWheel(i)}>×</button>
                 </div>
               ))}
-              <button className="add-btn" onClick={addWheel}>+ Add wheel</button>
+              <button className="add-btn" onClick={addWheel}>{t('f.addwheel')}</button>
             </div>
           </Field>
         )}
 
         {!isOmni && (
-          <Field label="Wheel base" hint="distance between wheels">
+          <Field label={t('f.wheelbase')} hint={t('f.wheelbase.hint')}>
             <Slider value={w.wheel_base ?? 0.15} min={0.08} max={0.20} step={0.01} unit=" m"
               onChange={v => set(['wheels', 'wheel_base'], v)} />
           </Field>
@@ -306,11 +325,11 @@ export default function App() {
     }
 
     return (
-      <Section title="Sensors">
+      <Section title={t('sec.sensors')}>
         {/* IR Ring */}
         <div className="subsection">
-          <div className="subsection-title">IR Ring</div>
-          <Field label="Sectors">
+          <div className="subsection-title">{t('sub.ir')}</div>
+          <Field label={t('f.sectors')}>
             <div className="tag-group">
               {[8, 12, 16, 24].map(n => (
                 <Tag key={n} active={s.ir_ring?.count === n}
@@ -320,11 +339,11 @@ export default function App() {
               ))}
             </div>
           </Field>
-          <Field label="Range">
+          <Field label={t('f.range')}>
             <Slider value={s.ir_ring?.range ?? 1.5} min={0.5} max={3.0} step={0.1} unit=" m"
               onChange={v => set(['sensors', 'ir_ring', 'range'], v)} />
           </Field>
-          <Field label="Noise σ">
+          <Field label={t('f.noise')}>
             <Slider value={s.ir_ring?.noise_std ?? 0.05} min={0} max={0.3} step={0.01}
               onChange={v => set(['sensors', 'ir_ring', 'noise_std'], v)} />
           </Field>
@@ -332,8 +351,8 @@ export default function App() {
 
         {/* Compass */}
         <div className="subsection">
-          <div className="subsection-title">Compass</div>
-          <Field label="Noise σ" hint="degrees">
+          <div className="subsection-title">{t('sub.compass')}</div>
+          <Field label={t('f.noise')} hint={t('f.noise.deg')}>
             <Slider value={s.compass?.noise_std ?? 2.0} min={0} max={15} step={0.5} unit="°"
               onChange={v => set(['sensors', 'compass', 'noise_std'], v)} />
           </Field>
@@ -341,16 +360,16 @@ export default function App() {
 
         {/* Ultrasound */}
         <div className="subsection">
-          <div className="subsection-title">Ultrasound</div>
-          <Field label="Range">
+          <div className="subsection-title">{t('sub.us')}</div>
+          <Field label={t('f.range')}>
             <Slider value={s.ultrasound?.range ?? 2.0} min={0.5} max={4.0} step={0.1} unit=" m"
               onChange={v => set(['sensors', 'ultrasound', 'range'], v)} />
           </Field>
-          <Field label="Noise σ">
+          <Field label={t('f.noise')}>
             <Slider value={s.ultrasound?.noise_std ?? 0.03} min={0} max={0.2} step={0.01}
               onChange={v => set(['sensors', 'ultrasound', 'noise_std'], v)} />
           </Field>
-          <Field label="Directions">
+          <Field label={t('f.directions')}>
             <div className="list-items">
               {(s.ultrasound?.directions ?? []).map((dir, i) => (
                 <div key={i} className="list-item">
@@ -366,15 +385,15 @@ export default function App() {
                   <button className="icon-btn danger" onClick={() => removeUltrasound(i)}>×</button>
                 </div>
               ))}
-              <button className="add-btn" onClick={addUltrasound}>+ Add sensor</button>
+              <button className="add-btn" onClick={addUltrasound}>{t('f.addsensor')}</button>
             </div>
           </Field>
         </div>
 
         {/* Line sensors */}
         <div className="subsection">
-          <div className="subsection-title">Line Sensors</div>
-          <Field label="Positions" hint="relative to center (m)">
+          <div className="subsection-title">{t('sub.lines')}</div>
+          <Field label={t('f.positions')} hint={t('f.positions.hint')}>
             <div className="list-items">
               {(s.line_sensors?.positions ?? []).map(([lx, ly], i) => (
                 <div key={i} className="list-item">
@@ -396,7 +415,7 @@ export default function App() {
                   <button className="icon-btn danger" onClick={() => removeLineSensor(i)}>×</button>
                 </div>
               ))}
-              <button className="add-btn" onClick={addLineSensor}>+ Add sensor</button>
+              <button className="add-btn" onClick={addLineSensor}>{t('f.addsensor')}</button>
             </div>
           </Field>
         </div>
@@ -408,8 +427,8 @@ export default function App() {
     const k = r.kicker
     const hasKicker = !!k
     return (
-      <Section title="Kicker" defaultOpen>
-        <Field label="Enable">
+      <Section title={t('sec.kicker')} defaultOpen>
+        <Field label={t('f.enable')}>
           <label className="toggle">
             <input type="checkbox" checked={hasKicker}
               onChange={e => set(['kicker'], e.target.checked ? { force: 5.0, cooldown: 2.0 } : null)}
@@ -419,11 +438,11 @@ export default function App() {
         </Field>
         {hasKicker && (
           <>
-            <Field label="Force">
+            <Field label={t('f.force')}>
               <Slider value={k.force} min={1} max={15} step={0.5} unit=" N"
                 onChange={v => set(['kicker', 'force'], v)} />
             </Field>
-            <Field label="Cooldown">
+            <Field label={t('f.cooldown')}>
               <Slider value={k.cooldown} min={0.5} max={10} step={0.5} unit=" s"
                 onChange={v => set(['kicker', 'cooldown'], v)} />
             </Field>
@@ -456,22 +475,33 @@ export default function App() {
         </div>
         <div className="header-tabs">
           <button className={`hdr-tab ${tab === 'builder' ? 'active' : ''}`}
-            onClick={() => setTab('builder')}>⚙ Builder</button>
+            onClick={() => setTab('builder')}>{t('tab.builder')}</button>
           <button className={`hdr-tab ${tab === 'viewer' ? 'active' : ''}`}
-            onClick={() => setTab('viewer')}>▶ Simulation</button>
+            onClick={() => setTab('viewer')}>{t('tab.viewer')}</button>
         </div>
         <div className="header-actions">
           {status && (
             <span className={`status-msg ${status.type}`}>{status.msg}</span>
           )}
+          <input ref={fileRef} type="file" accept=".yaml,.yml"
+            style={{ display: 'none' }} onChange={importYaml} />
+          <button className="btn btn-ghost" onClick={() => fileRef.current?.click()}>
+            {t('btn.import')}
+          </button>
           <button className="btn btn-ghost" onClick={downloadYaml}>
-            ↓ Download YAML
+            {t('btn.export')}
           </button>
           <button className="btn btn-primary" onClick={saveRobot} disabled={loading}>
-            {loading ? 'Saving…' : '✓ Save'}
+            {loading ? t('btn.saving') : t('btn.save')}
+          </button>
+          <button className={`btn btn-ghost btn-icon ${prefsOpen ? 'active' : ''}`}
+            title={t('btn.prefs')} onClick={() => setPrefsOpen(o => !o)}>
+            ⚙
           </button>
         </div>
       </header>
+
+      {prefsOpen && <PrefsPanel onClose={() => setPrefsOpen(false)} />}
 
       {/* ── Simulation viewer ── */}
       {tab === 'viewer' && (
@@ -485,11 +515,11 @@ export default function App() {
 
       {/* Sidebar — robot list */}
       <aside className="sidebar">
-        <div className="sidebar-header">Robots</div>
-        <button className="sidebar-new" onClick={newRobot}>+ New robot</button>
+        <div className="sidebar-header">{t('sidebar.robots')}</div>
+        <button className="sidebar-new" onClick={newRobot}>{t('sidebar.new')}</button>
         <div className="sidebar-list">
           {robotList.length === 0 && (
-            <div className="sidebar-empty">No robots saved yet</div>
+            <div className="sidebar-empty">{t('sidebar.empty')}</div>
           )}
           {robotList.map(name => (
             <button key={name} className="sidebar-item" onClick={() => loadRobot(name)}>
@@ -513,20 +543,20 @@ export default function App() {
 
       {/* Preview panel */}
       <aside className="preview-panel">
-        <div className="preview-title">Live Preview</div>
+        <div className="preview-title">{t('pv.title')}</div>
         <div className="preview-svg">
           <RobotPreview robot={r} />
         </div>
         <div className="preview-info">
-          <InfoRow label="Name"    value={r.name || '—'} />
-          <InfoRow label="Shape"   value={r.body?.shape ?? '—'} />
-          <InfoRow label="Radius"  value={`${r.body?.radius ?? '—'} m`} />
-          <InfoRow label="Mass"    value={`${r.body?.mass ?? '—'} kg`} />
-          <InfoRow label="Drive"   value={r.wheels?.type ?? '—'} />
-          <InfoRow label="IR"      value={`${r.sensors?.ir_ring?.count ?? 0} sectors`} />
-          <InfoRow label="US"      value={`${(r.sensors?.ultrasound?.directions ?? []).length} beams`} />
-          <InfoRow label="Lines"   value={`${(r.sensors?.line_sensors?.positions ?? []).length} sensors`} />
-          <InfoRow label="Kicker"  value={r.kicker ? `${r.kicker.force} N` : 'none'} />
+          <InfoRow label={t('pv.name')}   value={r.name || '—'} />
+          <InfoRow label={t('pv.shape')}  value={r.body?.shape ?? '—'} />
+          <InfoRow label={t('pv.radius')} value={`${r.body?.radius ?? '—'} m`} />
+          <InfoRow label={t('pv.mass')}   value={`${r.body?.mass ?? '—'} kg`} />
+          <InfoRow label={t('pv.drive')}  value={r.wheels?.type ?? '—'} />
+          <InfoRow label={t('pv.ir')}     value={`${r.sensors?.ir_ring?.count ?? 0} ${t('pv.sectors')}`} />
+          <InfoRow label={t('pv.us')}     value={`${(r.sensors?.ultrasound?.directions ?? []).length} ${t('pv.beams')}`} />
+          <InfoRow label={t('pv.lines')}  value={`${(r.sensors?.line_sensors?.positions ?? []).length} ${t('pv.sensors')}`} />
+          <InfoRow label={t('pv.kicker')} value={r.kicker ? `${r.kicker.force} N` : t('pv.none')} />
         </div>
       </aside>
 

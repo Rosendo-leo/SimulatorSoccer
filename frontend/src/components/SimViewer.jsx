@@ -3,6 +3,7 @@ import * as THREE from 'three'
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js'
 import { API_BASE, WS_URL } from '../config'
+import { usePrefs } from '../prefs.jsx'
 import './SimViewer.css'
 
 // Field constants (meters) — must match field.py
@@ -12,9 +13,13 @@ const HG  = 0.300, GD  = 0.074
 const PD  = 0.25,  PHY = 0.40
 
 export default function SimViewer() {
+  const { prefs, t } = usePrefs()
   const mountRef = useRef(null)
   const objRef   = useRef({})   // { ballMesh, shadowMesh, robotMeshes, makeRobot }
   const wsRef    = useRef(null)
+  // Refs lidas pelos closures criados no mount (WS handler, makeRobot)
+  const tRef      = useRef(t);     tRef.current = t
+  const colorsRef = useRef(prefs); colorsRef.current = prefs
   const [hud,   setHud]   = useState({ score: { blue: 0, yellow: 0 }, state: 'playing', time: 0 })
   const [wsOk,  setWsOk]  = useState(false)
   const [speed, setSpeed] = useState(1.0)
@@ -117,7 +122,7 @@ export default function SimViewer() {
       setRPlaying(true)
       setRecList(null)
     } catch {
-      setSetupMsg({ type: 'err', msg: `Failed to load ${name}` })
+      setSetupMsg({ type: 'err', msg: tRef.current('sv.replay.loadfail', name) })
       setTimeout(() => setSetupMsg(null), 4000)
     }
   }
@@ -181,21 +186,21 @@ export default function SimViewer() {
     fill.position.set(-2, 4, -3)
     scene.add(fill)
 
-    // ── Field (zebra stripes) ──────────────────────────────────────────
+    // ── Field (zebra stripes) — cores vêm das preferências ────────────
+    const outAreaMat = new THREE.MeshLambertMaterial({ color: 0x1a4e1a })
     const outArea = new THREE.Mesh(
-      new THREE.PlaneGeometry(HTL * 2, HTW * 2),
-      new THREE.MeshLambertMaterial({ color: 0x1a4e1a })
-    )
+      new THREE.PlaneGeometry(HTL * 2, HTW * 2), outAreaMat)
     outArea.rotation.x = -Math.PI / 2
     outArea.receiveShadow = true
     scene.add(outArea)
 
+    const stripeMats = []
     const N_STRIPES = 7, stripeW = (HL * 2) / N_STRIPES
     for (let i = 0; i < N_STRIPES; i++) {
+      const mat = new THREE.MeshLambertMaterial({ color: 0x236b23 })
+      stripeMats.push(mat)
       const stripe = new THREE.Mesh(
-        new THREE.PlaneGeometry(stripeW - 0.001, HW * 2),
-        new THREE.MeshLambertMaterial({ color: i % 2 === 0 ? 0x236b23 : 0x1f5f1f })
-      )
+        new THREE.PlaneGeometry(stripeW - 0.001, HW * 2), mat)
       stripe.rotation.x = -Math.PI / 2
       stripe.position.set(-HL + stripeW * (i + 0.5), 0.001, 0)
       stripe.receiveShadow = true
@@ -244,10 +249,12 @@ export default function SimViewer() {
     addLines(circlePts)
 
     // ── Goals ─────────────────────────────────────────────────────────
+    const goalMats = {}
     function buildGoal(sign, color) {
       const mat = new THREE.MeshLambertMaterial({
         color, transparent: true, opacity: 0.40, side: THREE.DoubleSide,
       })
+      goalMats[sign < 0 ? 'blue' : 'yellow'] = mat
       const GH = 0.15
       // Back wall
       const back = new THREE.Mesh(new THREE.BoxGeometry(0.012, GH, HG * 2), mat)
@@ -314,7 +321,8 @@ export default function SimViewer() {
 
     function makeRobot(id, team, radius = 0.11, visual = null) {
       const isBlue   = team === 'blue'
-      const teamClr  = isBlue ? 0x3b82f6 : 0xeab308
+      const teamClr  = new THREE.Color(
+        isBlue ? colorsRef.current.blueColor : colorsRef.current.yellowColor)
       const group    = new THREE.Group()
 
       // Cylinder body
@@ -344,10 +352,11 @@ export default function SimViewer() {
       arrow.position.set(radius + 0.025, 0.04, 0)
       group.add(arrow)
 
-      // Team dot
+      // Team dot (versão clareada da cor do time)
       const dot = new THREE.Mesh(
         new THREE.SphereGeometry(0.022, 10, 10),
-        new THREE.MeshLambertMaterial({ color: isBlue ? 0xbfdbfe : 0xfef9c3 })
+        new THREE.MeshLambertMaterial({
+          color: teamClr.clone().lerp(new THREE.Color(0xffffff), 0.65) })
       )
       dot.position.y = 0.092
       group.add(dot)
@@ -397,7 +406,23 @@ export default function SimViewer() {
       }
     }
 
-    objRef.current = { ballMesh, shadowMesh, robotMeshes, makeRobot, clearRobots, applyFrame }
+    // Aplica as cores das preferências à cena (campo, gols, fundo, robôs)
+    function applyColors(p) {
+      const field = new THREE.Color(p.fieldColor)
+      outAreaMat.color.copy(field.clone().multiplyScalar(0.72))
+      stripeMats.forEach((m, i) =>
+        m.color.copy(i % 2 === 0 ? field : field.clone().multiplyScalar(0.88)))
+      goalMats.blue?.color.set(p.blueColor)
+      goalMats.yellow?.color.set(p.yellowColor)
+      const bg = new THREE.Color(p.theme === 'light' ? 0xdfe4ee : 0x0d1117)
+      scene.background = bg
+      scene.fog = new THREE.FogExp2(bg, 0.10)
+      clearRobots()   // robôs renascem no próximo frame com as cores novas
+    }
+
+    objRef.current = { ballMesh, shadowMesh, robotMeshes, makeRobot,
+                       clearRobots, applyFrame, applyColors }
+    applyColors(colorsRef.current)
 
     // ── Scenario editor: drag ball/robots (ativo só em edit mode) ─────
     const raycaster   = new THREE.Raycaster()
@@ -499,7 +524,7 @@ export default function SimViewer() {
           if (state.event === 'restarted') {
             objRef.current.clearRobots()
             setRecording(null)
-            setSetupMsg({ type: 'ok', msg: 'Match restarted' })
+            setSetupMsg({ type: 'ok', msg: tRef.current('sv.restarted') })
             setTimeout(() => setSetupMsg(null), 4000)
           } else if (state.event === 'error') {
             setSetupMsg({ type: 'err', msg: state.detail })
@@ -510,10 +535,10 @@ export default function SimViewer() {
             setRecording(null)
           } else if (state.event === 'scenario_saved') {
             refreshScenarios()
-            setSetupMsg({ type: 'ok', msg: `Scenario "${state.name}" saved` })
+            setSetupMsg({ type: 'ok', msg: tRef.current('sv.scn.saved', state.name) })
             setTimeout(() => setSetupMsg(null), 4000)
           } else if (state.event === 'scenario_loaded') {
-            setSetupMsg({ type: 'ok', msg: `Scenario "${state.name}" loaded` })
+            setSetupMsg({ type: 'ok', msg: tRef.current('sv.scn.loaded', state.name) })
             setTimeout(() => setSetupMsg(null), 4000)
           }
           return
@@ -547,6 +572,11 @@ export default function SimViewer() {
         mount.removeChild(renderer.domElement)
     }
   }, [])
+
+  // Reaplica cores/tema quando as preferências mudam
+  useEffect(() => {
+    objRef.current.applyColors?.(prefs)
+  }, [prefs.fieldColor, prefs.blueColor, prefs.yellowColor, prefs.theme])
 
   function sendCmd(cmd, extra = {}) {
     if (wsRef.current?.readyState === WebSocket.OPEN)
@@ -582,8 +612,8 @@ export default function SimViewer() {
         {[0, 1].map(i => (
           <select key={i} className="sv-select" value={match[team][i]}
             onChange={e => setSlot(team, i, e.target.value)}>
-            {i === 1 && <option value="">— (no 2nd robot)</option>}
-            {i === 0 && !match[team][0] && <option value="">select robot…</option>}
+            {i === 1 && <option value="">{t('sv.setup.no2nd')}</option>}
+            {i === 0 && !match[team][0] && <option value="">{t('sv.setup.pick')}</option>}
             {robots.map(r => <option key={r} value={r}>{r}</option>)}
           </select>
         ))}
@@ -611,7 +641,7 @@ export default function SimViewer() {
       {/* Score HUD */}
       <div className="sv-hud">
         <div className={`sv-team blue ${hud.state === 'goal_blue' ? 'flash' : ''}`}>
-          <span className="sv-name">BLUE</span>
+          <span className="sv-name">{t('sv.team.blue')}</span>
           <span className="sv-pts">{hud.score?.blue ?? 0}</span>
         </div>
         <div className="sv-mid">
@@ -622,27 +652,27 @@ export default function SimViewer() {
         </div>
         <div className={`sv-team yellow ${hud.state === 'goal_yellow' ? 'flash' : ''}`}>
           <span className="sv-pts">{hud.score?.yellow ?? 0}</span>
-          <span className="sv-name">YELLOW</span>
+          <span className="sv-name">{t('sv.team.yellow')}</span>
         </div>
       </div>
 
       {/* Controls bar */}
       <div className="sv-bar">
-        <span className={`sv-led ${wsOk ? 'ok' : 'off'}`} title={wsOk ? 'Connected' : 'Disconnected'} />
-        <button className="sv-btn" onClick={() => sendCmd('pause')}>⏸</button>
-        <button className="sv-btn" onClick={() => sendCmd('resume')}>▶</button>
-        <button className="sv-btn" onClick={() => sendCmd('reset')} title="Reset match">↺</button>
+        <span className={`sv-led ${wsOk ? 'ok' : 'off'}`} title={wsOk ? 'Online' : 'Offline'} />
+        <button className="sv-btn" onClick={() => sendCmd('pause')} title={t('sv.pause')}>⏸</button>
+        <button className="sv-btn" onClick={() => sendCmd('resume')} title={t('sv.resume')}>▶</button>
+        <button className="sv-btn" onClick={() => sendCmd('reset')} title={t('sv.reset')}>↺</button>
         <button className={`sv-btn ${setupOpen ? 'active' : ''}`}
-          onClick={() => setSetupOpen(o => !o)} title="Match setup">⚙</button>
+          onClick={() => setSetupOpen(o => !o)} title={t('sv.setup')}>⚙</button>
         <button className={`sv-btn ${recording ? 'rec' : ''}`}
           onClick={() => sendCmd(recording ? 'record_stop' : 'record_start')}
-          title={recording ? `Recording ${recording}…` : 'Record match'}>⏺</button>
+          title={recording ? t('sv.recording', recording) : t('sv.record')}>⏺</button>
         <button className={`sv-btn ${recList !== null || replay ? 'active' : ''}`}
-          onClick={openReplayPanel} title="Replays">🎞</button>
+          onClick={openReplayPanel} title={t('sv.replays')}>🎞</button>
         <button className={`sv-btn ${editMode ? 'active' : ''}`}
-          onClick={toggleEdit} title="Scenario editor (drag ball/robots)">✋</button>
+          onClick={toggleEdit} title={t('sv.editor')}>✋</button>
         <div className="sv-speed-group">
-          <span>Speed</span>
+          <span>{t('sv.speed')}</span>
           {[0.5, 1, 2, 4].map(s => (
             <button key={s}
               className={`sv-spd ${speed === s ? 'active' : ''}`}
@@ -651,13 +681,13 @@ export default function SimViewer() {
             </button>
           ))}
         </div>
-        <span className="sv-tip">Drag to orbit · Scroll to zoom</span>
+        <span className="sv-tip">{t('sv.tip')}</span>
       </div>
 
       {/* Match setup panel */}
       {setupOpen && (
         <div className="sv-setup">
-          <div className="sv-setup-title">Match Setup</div>
+          <div className="sv-setup-title">{t('sv.setup.title')}</div>
           <div className="sv-setup-teams">
             <TeamSetup team="blue"   label="BLUE" />
             <TeamSetup team="yellow" label="YELLOW" />
@@ -668,7 +698,7 @@ export default function SimViewer() {
             )}
             <button className="sv-setup-restart" onClick={restartMatch}
               disabled={!wsOk || !match.blue[0] || !match.yellow[0]}>
-              ⟳ Restart match
+              {t('sv.setup.restart')}
             </button>
           </div>
         </div>
@@ -677,17 +707,17 @@ export default function SimViewer() {
       {/* Scenario editor panel */}
       {editMode && (
         <div className="sv-setup sv-editor">
-          <div className="sv-setup-title">Scenario Editor</div>
+          <div className="sv-setup-title">{t('sv.editor.title')}</div>
           <div className="sv-editor-hint">
-            Sim paused — drag the ball or any robot to reposition it.
+            {t('sv.editor.hint')}
           </div>
           <div className="sv-editor-save">
-            <input className="sv-text" placeholder="scenario name"
+            <input className="sv-text" placeholder={t('sv.editor.name')}
               value={scnName} onChange={e => setScnName(e.target.value)} />
             <button className="sv-setup-restart" disabled={!scnName.trim() || !wsOk}
               onClick={() => sendCmd('scenario_save',
                 { name: scnName.trim().toLowerCase().replace(/\s+/g, '_') })}>
-              Save
+              {t('sv.editor.save')}
             </button>
           </div>
           {scenarios.length > 0 && (
@@ -712,10 +742,10 @@ export default function SimViewer() {
       {/* Replay list panel */}
       {recList !== null && (
         <div className="sv-setup sv-replays">
-          <div className="sv-setup-title">Replays</div>
+          <div className="sv-setup-title">{t('sv.replays.title')}</div>
           {recList.length === 0 && (
             <div className="sv-replays-empty">
-              No recordings yet — press ⏺ to record a match.
+              {t('sv.replays.empty')}
             </div>
           )}
           <div className="sv-replays-list">
@@ -739,7 +769,7 @@ export default function SimViewer() {
             <span className="sv-timeline-time">
               {fmtTime((replay.frames[rIdx]?.timestamp) ?? 0)} / {fmtTime(replay.frames.at(-1)?.timestamp ?? 0)}
             </span>
-            <button className="sv-btn" onClick={exitReplay} title="Exit replay">✕</button>
+            <button className="sv-btn" onClick={exitReplay} title={t('sv.replay.exit')}>✕</button>
           </div>
           <div className="sv-timeline-row">
             <button className="sv-btn" onClick={() => setRPlaying(p => !p)}>
@@ -764,9 +794,9 @@ export default function SimViewer() {
       {!wsOk && (
         <div className="sv-offline">
           <div className="sv-offline-box">
-            <div className="sv-offline-title">Server offline</div>
+            <div className="sv-offline-title">{t('sv.offline.title')}</div>
             <code className="sv-offline-cmd">uvicorn server.main:app --reload</code>
-            <div className="sv-offline-sub">Reconnecting automatically…</div>
+            <div className="sv-offline-sub">{t('sv.offline.sub')}</div>
           </div>
         </div>
       )}

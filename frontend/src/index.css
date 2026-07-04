@@ -22,6 +22,27 @@
   --shadow:      0 4px 24px rgba(0,0,0,0.4);
 }
 
+/* Tema claro — override das variáveis (ativado via data-theme no <html>) */
+[data-theme="light"] {
+  --bg:          #eef0f6;
+  --panel:       #ffffff;
+  --card:        #f5f7fb;
+  --border:      #c9d0e3;
+  --border-dim:  #dde2ef;
+  --accent:      #3556c8;
+  --accent-dim:  #a8b8ea;
+  --green:       #4d7c0f;
+  --cyan:        #0e7490;
+  --orange:      #c2570a;
+  --red:         #be123c;
+  --purple:      #7c3aed;
+  --yellow:      #a16207;
+  --text:        #333a56;
+  --text-dim:    #7d849e;
+  --text-bright: #14162b;
+  --shadow:      0 4px 24px rgba(90, 100, 140, 0.22);
+}
+
 html, body, #root { height: 100%; }
 
 body {
