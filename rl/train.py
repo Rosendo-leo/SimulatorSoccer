@@ -32,7 +32,11 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--timesteps", type=int, default=200_000)
     p.add_argument("--n-envs",    type=int, default=4)
     p.add_argument("--seed",      type=int, default=0)
-    p.add_argument("--obs-mode",  choices=("vector", "percepts"), default="vector")
+    p.add_argument("--obs-mode",  choices=("vector", "percepts", "camera"),
+                   default="vector")
+    p.add_argument("--agent-config", default="robots/striker_v3.yaml",
+                   help="YAML do robô do agente (camera exige sensors.camera, "
+                        "ex.: robots/example.yaml)")
     p.add_argument("--opponent",  default="examples.defender_strategy",
                    help="módulo da estratégia adversária")
     p.add_argument("--frame-skip", type=int, default=4)
@@ -48,6 +52,7 @@ def main() -> None:
 
     def make_env():
         return Monitor(SoccerEnv(
+            agent_config=args.agent_config,
             obs_mode=args.obs_mode,
             opponent_strategy=args.opponent,
             frame_skip=args.frame_skip,
@@ -55,7 +60,8 @@ def main() -> None:
         ))
 
     vec = make_vec_env(make_env, n_envs=args.n_envs, seed=args.seed)
-    model = PPO("MlpPolicy", vec, verbose=1, seed=args.seed)
+    policy = "CnnPolicy" if args.obs_mode == "camera" else "MlpPolicy"
+    model = PPO(policy, vec, verbose=1, seed=args.seed)
 
     t0 = time.perf_counter()
     model.learn(total_timesteps=args.timesteps, progress_bar=False)
@@ -67,7 +73,8 @@ def main() -> None:
     print(f"Modelo salvo em {save_path}.zip")
 
     # ── Avaliação rápida ──────────────────────────────────────────────────────
-    env = SoccerEnv(obs_mode=args.obs_mode,
+    env = SoccerEnv(agent_config=args.agent_config,
+                    obs_mode=args.obs_mode,
                     opponent_strategy=args.opponent,
                     frame_skip=args.frame_skip, seed=args.seed + 1000)
     goals = conceded = 0

@@ -165,3 +165,20 @@ def test_percepts_obs_includes_new_sensors():
     # 2 floats de ball_velocity + 5 do lidar do example.yaml
     assert (e_full.observation_space.shape[0]
             >= e_base.observation_space.shape[0] + 7)
+
+
+def test_camera_obs_mode():
+    e = SoccerEnv(agent_config="robots/example.yaml", obs_mode="camera",
+                  seed=1, randomize=False)
+    assert e.observation_space.dtype == np.uint8
+    obs, _ = e.reset()
+    assert obs.shape == e.observation_space.shape          # (H, W, 3)
+    assert obs.shape[2] == 3
+    obs, r, term, trunc, info = e.step(np.zeros(4))
+    assert obs.dtype == np.uint8
+
+
+def test_camera_obs_requires_camera_block():
+    with pytest.raises(ValueError, match="sensors.camera"):
+        SoccerEnv(agent_config="robots/striker_v3.yaml", obs_mode="camera",
+                  seed=1)

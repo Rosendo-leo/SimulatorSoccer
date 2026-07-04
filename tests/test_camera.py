@@ -181,3 +181,13 @@ def test_vision_strategy_scores(tmp_path):
         if engine.score["blue"] > 0:
             break
     assert engine.score["blue"] > 0
+
+
+# ── encode_png ────────────────────────────────────────────────────────────────
+
+def test_encode_png_valid():
+    from sim.camera import encode_png
+    frame = render_camera(_cfg(width=32, height=24), 0, 0, 0, (0.4, 0), [])
+    png = encode_png(frame)
+    assert png[:8] == b"\x89PNG\r\n\x1a\n"
+    assert b"IHDR" in png[:30] and png[-8:-4] == b"IEND"

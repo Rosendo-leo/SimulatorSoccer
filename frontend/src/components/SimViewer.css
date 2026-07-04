@@ -469,3 +469,43 @@
   from { opacity: 0; transform: translateX(-50%) translateY(-8px); }
   to   { opacity: 1; transform: translateX(-50%) translateY(0); }
 }
+
+/* ── Camera PiP ──────────────────────────────────────────────────────── */
+.sv-campip {
+  position: absolute;
+  right: 14px;
+  bottom: 60px;
+  z-index: 30;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow);
+  padding: 8px;
+  width: 264px;
+}
+.sv-campip-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+.sv-campip-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-bright);
+  flex: 1;
+  white-space: nowrap;
+}
+.sv-campip-head .sv-select { width: 90px; }
+.sv-campip-img {
+  display: block;
+  width: 100%;
+  border-radius: var(--radius);
+  image-rendering: pixelated;
+}
+.sv-campip-none {
+  font-size: 11px;
+  color: var(--text-dim);
+  padding: 12px 6px;
+  text-align: center;
+}

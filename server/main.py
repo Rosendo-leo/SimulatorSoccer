@@ -1,6 +1,7 @@
 """FastAPI server: robot CRUD + WebSocket simulation stream."""
 from __future__ import annotations
 import asyncio
+import base64
 import importlib
 import json
 import os
@@ -269,6 +270,22 @@ async def ws_sim(ws: WebSocket):
                 except HTTPException as exc:
                     await ws.send_text(json.dumps(
                         {"event": "error", "detail": exc.detail}))
+            elif cmd == "camera_frame" and _engine:
+                # PiP do viewer: renderiza a câmera do robô pedido (PNG b64);
+                # png=null quando o robô não existe ou não tem câmera
+                rid = msg.get("robot", "")
+                entry = next((e for e in _engine.entries
+                              if e.robot_id == rid), None)
+                png = None
+                if entry is not None:
+                    try:
+                        from sim.camera import encode_png
+                        frame = entry.hal.read_camera_frame()
+                        png = base64.b64encode(encode_png(frame)).decode()
+                    except NotImplementedError:
+                        png = None
+                await ws.send_text(json.dumps(
+                    {"event": "camera_frame", "robot": rid, "png": png}))
             elif cmd == "record_start" and _engine:
                 if _recording is None:
                     _recording = time.strftime("match_%Y%m%d_%H%M%S")

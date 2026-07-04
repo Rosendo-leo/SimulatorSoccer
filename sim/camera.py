@@ -1,4 +1,4 @@
-"""Câmera simulada (B1) — rasterizador numpy headless.
+"""Câmera simulada (B1) — rasterizador numpy headless + encoder PNG.
 
 Renderiza um frame RGB (H, W, 3) uint8 do ponto de vista do robô, sem
 depender do viewer Three.js — funciona em --headless, no RL e no CI.
@@ -16,6 +16,8 @@ iluminação — o suficiente para blob por cor / CNN leve.
 from __future__ import annotations
 
 import math
+import struct
+import zlib
 
 import numpy as np
 
@@ -251,3 +253,19 @@ def render_camera(cfg, robot_x: float, robot_y: float, heading: float,
         colors = colors + rng.normal(0, cfg.noise_std, colors.shape)
 
     return np.clip(colors, 0, 255).astype(np.uint8).reshape(h, w, 3)
+
+
+def encode_png(img: np.ndarray) -> bytes:
+    """Codifica um frame (H, W, 3) uint8 como PNG — só stdlib (p/ o PiP
+    do viewer, sem depender de PIL no servidor)."""
+    h, w, _ = img.shape
+    raw = b"".join(b"\x00" + img[i].tobytes() for i in range(h))
+
+    def chunk(tag: bytes, data: bytes) -> bytes:
+        return (struct.pack(">I", len(data)) + tag + data
+                + struct.pack(">I", zlib.crc32(tag + data)))
+
+    return (b"\x89PNG\r\n\x1a\n"
+            + chunk(b"IHDR", struct.pack(">IIBBBBB", w, h, 8, 2, 0, 0, 0))
+            + chunk(b"IDAT", zlib.compress(raw, 6))
+            + chunk(b"IEND", b""))

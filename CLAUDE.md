@@ -90,7 +90,7 @@ Eixo Y = largura do campo.
 | `read_position()` | `(float, float)` metros | Posição world (x, y) — sim usa PyMunk diretamente |
 | `read_ball_velocity()` | `(vx, vy)` m/s | Frame do mundo; requer `sensors.ball_velocity` no YAML |
 | `read_opponent_lidar()` | `[float]` metros | Detecta SÓ robôs (ignora bola/paredes); requer `sensors.opponent_lidar` |
-| `read_camera_frame()` | `(H, W, 3)` uint8 | Câmera simulada (B1): `sensors.camera` no YAML, `type: pinhole\|fisheye\|catadioptric`. Render lazy em numpy (`sim/camera.py`, ~6 ms a 160×120), funciona headless. Catadioptric: centro = robô, topo = frente, esquerda da imagem = esquerda do robô |
+| `read_camera_frame()` | `(H, W, 3)` uint8 | Câmera simulada (B1): `sensors.camera` no YAML, `type: pinhole\|fisheye\|catadioptric`. Render lazy em numpy (`sim/camera.py`, ~6 ms a 160×120), funciona headless. Catadioptric: centro = robô, topo = frente, esquerda da imagem = esquerda do robô. PiP no viewer (botão 📷, WS `camera_frame` → PNG b64 a ~5 fps); RL: `obs_mode="camera"` + CnnPolicy |
 
 **Atuadores extras:** `kick(angle_deg=0)` — direção dentro de `kicker.aim_range`
 (0 = só frontal, 360 = qualquer direção); `set_dribbler(on)` — requer bloco
@@ -377,6 +377,7 @@ cd frontend && npm run dev    # → http://localhost:5173
 python -m rl.train --timesteps 200000                     # treina PPO
 python -m rl.train --obs-mode percepts --n-envs 8         # obs realistas
 python -m rl.train --domain-rand                          # sim2real: massa/ruído variam
+python -m rl.train --obs-mode camera --agent-config robots/example.yaml  # CnnPolicy
 python - <<'EOF'                                          # PettingZoo 2v2
 from rl.soccer_pz import SoccerParallelEnv
 env = SoccerParallelEnv(); obs, _ = env.reset(seed=0)

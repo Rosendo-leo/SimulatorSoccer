@@ -10,6 +10,8 @@ Observação (`obs_mode`):
   "percepts" — apenas o que a HAL fornece (IR ring + bússola sin/cos +
                ultrassom + line sensors + odometria). Realista (sim2real);
                tamanho depende do YAML do robô.
+  "camera"   — frame RGB (H, W, 3) uint8 da câmera simulada (exige bloco
+               sensors.camera no YAML do agente; use CnnPolicy no SB3).
 
 Ação: Box(-1, 1, (4,)) → [vx, vy, omega, kick]
   vx/vy escalados por body.max_speed (frame local: vx=frente, vy=esquerda),
@@ -62,8 +64,10 @@ class SoccerEnv(gym.Env):
         domain_rand: bool = False,    # randomiza massa/ruído por episódio
         seed: int | None = None,
     ) -> None:
-        if obs_mode not in ("vector", "percepts"):
-            raise ValueError(f"obs_mode must be 'vector' or 'percepts', got {obs_mode!r}")
+        if obs_mode not in ("vector", "percepts", "camera"):
+            raise ValueError(
+                f"obs_mode must be 'vector', 'percepts' or 'camera', "
+                f"got {obs_mode!r}")
         self._agent_config    = str(_ROOT / agent_config)
         self._opponent_config = str(_ROOT / opponent_config) if opponent_config else None
         self._opponent_fn     = _load_strategy(opponent_strategy)
@@ -77,8 +81,12 @@ class SoccerEnv(gym.Env):
 
         self.action_space = spaces.Box(-1.0, 1.0, shape=(4,), dtype=np.float32)
         obs = self._observe()
-        self.observation_space = spaces.Box(
-            -np.inf, np.inf, shape=obs.shape, dtype=np.float32)
+        if obs_mode == "camera":
+            self.observation_space = spaces.Box(
+                0, 255, shape=obs.shape, dtype=np.uint8)
+        else:
+            self.observation_space = spaces.Box(
+                -np.inf, np.inf, shape=obs.shape, dtype=np.float32)
 
     # ── Setup ─────────────────────────────────────────────────────────────────
 
@@ -92,6 +100,12 @@ class SoccerEnv(gym.Env):
                 self._opponent_config, "yellow", strategy_fn=self._opponent_fn)
         self._steps = 0
         self._hal._refresh_percepts()
+
+        if self.obs_mode == "camera" and \
+                self._agent.robot.config.sensors.camera is None:
+            raise ValueError(
+                "obs_mode='camera' exige um bloco sensors.camera no YAML "
+                f"do agente ({self._agent_config})")
 
         # Baselines para domain randomization (restaurados a cada episódio)
         cfg = self._agent.robot.config
@@ -115,6 +129,8 @@ class SoccerEnv(gym.Env):
     # ── Observation ───────────────────────────────────────────────────────────
 
     def _observe(self) -> np.ndarray:
+        if self.obs_mode == "camera":
+            return self._hal.read_camera_frame()
         if self.obs_mode == "percepts":
             p = self._hal
             heading = p.read_compass()

@@ -29,6 +29,12 @@ export default function SimViewer() {
   const vioTickRef  = useRef(null)   // null = ainda não viu nenhum frame
   const vioTimerRef = useRef(null)
 
+  // PiP da câmera do robô
+  const [camOpen,  setCamOpen]  = useState(false)
+  const [camRobot, setCamRobot] = useState('blue_1')
+  const [camImg,   setCamImg]   = useState(null)     // dataURL ou 'none'
+  const [robotIds, setRobotIds] = useState([])
+
   // ── Match setup state ─────────────────────────────────────────────
   const [setupOpen,  setSetupOpen]  = useState(false)
   const [robots,     setRobots]     = useState([])
@@ -545,6 +551,8 @@ export default function SimViewer() {
           } else if (state.event === 'scenario_loaded') {
             setSetupMsg({ type: 'ok', msg: tRef.current('sv.scn.loaded', state.name) })
             setTimeout(() => setSetupMsg(null), 4000)
+          } else if (state.event === 'camera_frame') {
+            setCamImg(state.png ? `data:image/png;base64,${state.png}` : 'none')
           }
           return
         }
@@ -568,6 +576,10 @@ export default function SimViewer() {
           vioTimerRef.current = setTimeout(() => setViolation(null), 3500)
         }
 
+        setRobotIds(prev => {
+          const ids = state.robots.map(r => r.id)
+          return ids.join() === prev.join() ? prev : ids
+        })
         setHud({ score: state.score, state: state.state, time: state.timestamp })
         objRef.current.applyFrame(state)
       }
@@ -593,6 +605,22 @@ export default function SimViewer() {
   useEffect(() => {
     objRef.current.applyColors?.(prefs)
   }, [prefs.fieldColor, prefs.blueColor, prefs.yellowColor, prefs.theme])
+
+  // Polling do PiP da câmera (~5 fps enquanto aberto)
+  useEffect(() => {
+    if (!camOpen) return
+    setCamImg(null)
+    const poll = () => sendCmd('camera_frame', { robot: camRobot })
+    poll()
+    const id = setInterval(poll, 200)
+    return () => clearInterval(id)
+  }, [camOpen, camRobot])
+
+  // Se o line-up mudar e o robô escolhido sumir, volta ao primeiro
+  useEffect(() => {
+    if (robotIds.length && !robotIds.includes(camRobot))
+      setCamRobot(robotIds[0])
+  }, [robotIds, camRobot])
 
   function sendCmd(cmd, extra = {}) {
     if (wsRef.current?.readyState === WebSocket.OPEN)
@@ -700,6 +728,8 @@ export default function SimViewer() {
           onClick={openReplayPanel} title={t('sv.replays')}>🎞</button>
         <button className={`sv-btn ${editMode ? 'active' : ''}`}
           onClick={toggleEdit} title={t('sv.editor')}>✋</button>
+        <button className={`sv-btn ${camOpen ? 'active' : ''}`}
+          onClick={() => setCamOpen(o => !o)} title={t('sv.camera')}>📷</button>
         <div className="sv-speed-group">
           <span>{t('sv.speed')}</span>
           {[0.5, 1, 2, 4].map(s => (
@@ -816,6 +846,28 @@ export default function SimViewer() {
               </button>
             ))}
           </div>
+        </div>
+      )}
+
+      {/* Camera PiP */}
+      {camOpen && (
+        <div className="sv-campip">
+          <div className="sv-campip-head">
+            <span className="sv-campip-title">📷 {t('sv.camera')}</span>
+            <select className="sv-select" value={camRobot}
+              onChange={e => setCamRobot(e.target.value)}>
+              {(robotIds.length ? robotIds : [camRobot]).map(id => (
+                <option key={id} value={id}>{id}</option>
+              ))}
+            </select>
+            <button className="sv-btn" onClick={() => setCamOpen(false)}>✕</button>
+          </div>
+          {camImg && camImg !== 'none' && (
+            <img className="sv-campip-img" src={camImg} alt="camera" />
+          )}
+          {camImg === 'none' && (
+            <div className="sv-campip-none">{t('sv.camera.none')}</div>
+          )}
         </div>
       )}
 

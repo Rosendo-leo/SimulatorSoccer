@@ -76,6 +76,9 @@ export const STRINGS = {
     'sub.ballvel.hint': 'p/ interceptação',
     'sub.lidar': 'Lidar de robôs',
     'sub.lidar.hint': 'detecta só robôs',
+    // Câmera PiP (viewer)
+    'sv.camera': 'Câmera do robô',
+    'sv.camera.none': 'Este robô não tem câmera (bloco sensors.camera no YAML)',
     // Árbitro (badge no viewer)
     'ref.pushing': 'Empurrão (pushing)',
     'ref.multiple_defense': 'Defesa múltipla',
@@ -220,6 +223,8 @@ export const STRINGS = {
     'sub.ballvel.hint': 'for interception',
     'sub.lidar': 'Robot lidar',
     'sub.lidar.hint': 'detects robots only',
+    'sv.camera': 'Robot camera',
+    'sv.camera.none': 'This robot has no camera (sensors.camera block in YAML)',
     'ref.pushing': 'Pushing',
     'ref.multiple_defense': 'Multiple defense',
     'ref.lack_of_progress': 'Lack of progress',

@@ -145,3 +145,19 @@ def test_recording_roundtrip(tmp_path, monkeypatch):
 
     assert srv.delete_recording("test_match") == {"deleted": "test_match"}
     assert srv.list_recordings() == []
+
+
+def test_ws_camera_frame():
+    """PiP: robô sem câmera devolve png=null; robô inexistente também."""
+    from fastapi.testclient import TestClient
+    from server.main import app
+    with TestClient(app) as client, \
+            client.websocket_connect("/ws/sim") as ws:
+        ws.receive_json()                       # estado inicial
+        ws.send_json({"cmd": "camera_frame", "robot": "blue_1"})
+        while True:
+            msg = ws.receive_json()
+            if msg.get("event") == "camera_frame":
+                break
+        assert msg["robot"] == "blue_1"
+        assert msg["png"] is None               # striker_v3 não tem câmera
