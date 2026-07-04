@@ -70,7 +70,10 @@ class SoccerEnv(gym.Env):
                 f"got {obs_mode!r}")
         self._agent_config    = str(_ROOT / agent_config)
         self._opponent_config = str(_ROOT / opponent_config) if opponent_config else None
-        self._opponent_fn     = _load_strategy(opponent_strategy)
+        # opponent_strategy: módulo ("examples.x") OU callable strategy(hal)
+        # OU factory sem argumentos que devolve uma strategy (self-play)
+        self._opponent_fn = (opponent_strategy if callable(opponent_strategy)
+                             else _load_strategy(opponent_strategy))
         self.obs_mode    = obs_mode
         self.frame_skip  = frame_skip
         self.max_steps   = max_steps
