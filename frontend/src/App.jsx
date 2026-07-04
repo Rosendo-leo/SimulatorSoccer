@@ -438,6 +438,83 @@ export default function App() {
           </Field>
         </div>
 
+        {/* Camera (B1) */}
+        <div className="subsection">
+          <div className="subsection-title">{t('sub.camera')}</div>
+          <Field label={t('f.enable')} hint={t('sub.camera.hint')}>
+            <label className="toggle">
+              <input type="checkbox" checked={!!s.camera}
+                onChange={e => set(['sensors', 'camera'],
+                  e.target.checked
+                    ? { type: 'catadioptric', width: 120, height: 90,
+                        fov: 60, direction: 0, height_m: 0.25,
+                        range: 2.5, noise_std: 4.0 }
+                    : null)}
+              />
+              <span className="toggle-track" />
+            </label>
+          </Field>
+          {s.camera && (
+            <>
+              <Field label={t('f.camtype')}>
+                <div className="tag-group">
+                  <Tag active={s.camera.type === 'catadioptric'}
+                    onClick={() => set(['sensors', 'camera', 'type'], 'catadioptric')}>
+                    {t('f.cam.cata')}
+                  </Tag>
+                  <Tag active={s.camera.type === 'pinhole'}
+                    onClick={() => set(['sensors', 'camera', 'type'], 'pinhole')}>
+                    {t('f.cam.pinhole')}
+                  </Tag>
+                  <Tag active={s.camera.type === 'fisheye'}
+                    onClick={() => set(['sensors', 'camera', 'type'], 'fisheye')}>
+                    {t('f.cam.fisheye')}
+                  </Tag>
+                </div>
+              </Field>
+              <Field label={t('f.resolution')} hint="px">
+                <div className="tag-group">
+                  {[[80, 60], [120, 90], [160, 120], [240, 180]].map(([w, h]) => (
+                    <Tag key={w} active={s.camera.width === w}
+                      onClick={() => {
+                        set(['sensors', 'camera', 'width'], w)
+                        set(['sensors', 'camera', 'height'], h)
+                      }}>
+                      {w}×{h}
+                    </Tag>
+                  ))}
+                </div>
+              </Field>
+              {s.camera.type !== 'catadioptric' && (
+                <>
+                  <Field label={t('f.fov')}>
+                    <Slider value={s.camera.fov ?? 60} min={30} max={200} step={5} unit="°"
+                      onChange={v => set(['sensors', 'camera', 'fov'], v)} />
+                  </Field>
+                  <Field label={t('f.direction')}>
+                    <Slider value={s.camera.direction ?? 0} min={-180} max={180} step={5} unit="°"
+                      onChange={v => set(['sensors', 'camera', 'direction'], v)} />
+                  </Field>
+                </>
+              )}
+              {s.camera.type === 'catadioptric' && (
+                <Field label={t('f.camrange')}>
+                  <Slider value={s.camera.range ?? 2.5} min={0.5} max={4.0} step={0.1} unit=" m"
+                    onChange={v => set(['sensors', 'camera', 'range'], v)} />
+                </Field>
+              )}
+              <Field label={t('f.camheight')}>
+                <Slider value={s.camera.height_m ?? 0.25} min={0.05} max={0.4} step={0.01} unit=" m"
+                  onChange={v => set(['sensors', 'camera', 'height_m'], v)} />
+              </Field>
+              <Field label={t('f.noise')}>
+                <Slider value={s.camera.noise_std ?? 4.0} min={0} max={20} step={0.5}
+                  onChange={v => set(['sensors', 'camera', 'noise_std'], v)} />
+              </Field>
+            </>
+          )}
+        </div>
+
         {/* Ball velocity (B5) */}
         <div className="subsection">
           <div className="subsection-title">{t('sub.ballvel')}</div>
